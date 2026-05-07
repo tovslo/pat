@@ -24,7 +24,7 @@ describe('useAuthStore', () => {
     await auth.register('user@example.com', 'password123')
     expect(mockFetch).toHaveBeenCalledWith('/api/v1/auth/register', {
       method: 'POST',
-      body: { email: 'user@example.com', password: 'password123' },
+      body: { email: 'user@example.com', password: 'password123' }
     })
   })
 

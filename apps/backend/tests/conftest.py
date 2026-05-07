@@ -1,11 +1,10 @@
-import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.core.deps import get_db
 from app.db.base import Base
 from app.main import app
-from app.core.deps import get_db
 
 # Используем SQLite в памяти для тестов (без необходимости PostgreSQL)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

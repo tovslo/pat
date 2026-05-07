@@ -3,47 +3,47 @@ definePageMeta({ layout: false })
 
 useSeoMeta({
   title: 'MyApp — ИИ-платформа для документов',
-  description: 'Self-hosted платформа для анализа, поиска и автоматизации работы с документами на базе FastAPI и Nuxt 3.',
+  description: 'Self-hosted платформа для анализа, поиска и автоматизации работы с документами на базе FastAPI и Nuxt 3.'
 })
 
 const navLinks = [
   { label: 'Возможности', href: '#features' },
   { label: 'Технологии', href: '#tech' },
   { label: 'Тарифы', href: '#pricing' },
-  { label: 'Контакты', href: '#contact' },
+  { label: 'Контакты', href: '#contact' }
 ]
 
 const features = [
   {
     icon: '🧠',
     title: 'ИИ-анализ документов',
-    desc: 'Автоматическое извлечение данных, суммаризация и классификация любых документов с помощью языковых моделей.',
+    desc: 'Автоматическое извлечение данных, суммаризация и классификация любых документов с помощью языковых моделей.'
   },
   {
     icon: '⚡',
     title: 'Семантический поиск',
-    desc: 'Мгновенный поиск по всему архиву документов. Находит смысл, а не только ключевые слова.',
+    desc: 'Мгновенный поиск по всему архиву документов. Находит смысл, а не только ключевые слова.'
   },
   {
     icon: '🔒',
     title: 'Полная безопасность',
-    desc: 'Self-hosted решение — данные остаются на вашем сервере. Шифрование на каждом уровне.',
+    desc: 'Self-hosted решение — данные остаются на вашем сервере. Шифрование на каждом уровне.'
   },
   {
     icon: '🔄',
     title: 'Автоматизация задач',
-    desc: 'Гибкие пайплайны обработки с Celery + RabbitMQ. Уведомления в реальном времени через WebSocket.',
+    desc: 'Гибкие пайплайны обработки с Celery + RabbitMQ. Уведомления в реальном времени через WebSocket.'
   },
   {
     icon: '📊',
     title: 'Аналитика и отчёты',
-    desc: 'Дашборды с метриками, трендами и экспортом. Grafana + Prometheus из коробки.',
+    desc: 'Дашборды с метриками, трендами и экспортом. Grafana + Prometheus из коробки.'
   },
   {
     icon: '🌐',
     title: 'API-first подход',
-    desc: 'RESTful API с OpenAPI-документацией. Type-safe клиент из схемы для быстрой интеграции.',
-  },
+    desc: 'RESTful API с OpenAPI-документацией. Type-safe клиент из схемы для быстрой интеграции.'
+  }
 ]
 
 const techStack = [
@@ -54,7 +54,7 @@ const techStack = [
   { label: 'RabbitMQ', color: '#f59e0b' },
   { label: 'Docker Swarm', color: '#0ea5e9' },
   { label: 'Traefik', color: '#ec4899' },
-  { label: 'Prometheus', color: '#ef4444' },
+  { label: 'Prometheus', color: '#ef4444' }
 ]
 
 const mobileMenuOpen = ref(false)
@@ -81,7 +81,10 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
     />
 
     <!-- ── Animated background ── -->
-    <div class="bg-stage" aria-hidden="true">
+    <div
+      class="bg-stage"
+      aria-hidden="true"
+    >
       <div class="orb orb-1" />
       <div class="orb orb-2" />
       <div class="orb orb-3" />
@@ -93,7 +96,10 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
     <header class="site-header">
       <div class="wrap flex items-center justify-between h-16">
         <!-- Logo -->
-        <NuxtLink to="/" class="logo-mark">
+        <NuxtLink
+          to="/"
+          class="logo-mark"
+        >
           <span class="logo-icon">◈</span>
           <span class="logo-text">MyApp</span>
         </NuxtLink>
@@ -112,8 +118,14 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
 
         <!-- Actions -->
         <div class="header-actions">
-          <NuxtLink to="/auth/login" class="btn-ghost">Войти</NuxtLink>
-          <NuxtLink to="/auth/register" class="btn-primary">Начать бесплатно</NuxtLink>
+          <NuxtLink
+            to="/auth/login"
+            class="btn-ghost"
+          >Войти</NuxtLink>
+          <NuxtLink
+            to="/auth/register"
+            class="btn-primary"
+          >Начать бесплатно</NuxtLink>
 
           <!-- Burger (mobile) -->
           <button
@@ -121,16 +133,28 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
             :aria-expanded="mobileMenuOpen"
             @click="mobileMenuOpen = !mobileMenuOpen"
           >
-            <span class="burger-line" :class="{ open: mobileMenuOpen }" />
-            <span class="burger-line" :class="{ open: mobileMenuOpen }" />
-            <span class="burger-line" :class="{ open: mobileMenuOpen }" />
+            <span
+              class="burger-line"
+              :class="{ open: mobileMenuOpen }"
+            />
+            <span
+              class="burger-line"
+              :class="{ open: mobileMenuOpen }"
+            />
+            <span
+              class="burger-line"
+              :class="{ open: mobileMenuOpen }"
+            />
           </button>
         </div>
       </div>
 
       <!-- Mobile menu -->
       <Transition name="slide-down">
-        <nav v-if="mobileMenuOpen" class="mobile-nav">
+        <nav
+          v-if="mobileMenuOpen"
+          class="mobile-nav"
+        >
           <a
             v-for="link in navLinks"
             :key="link.href"
@@ -141,8 +165,14 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
             {{ link.label }}
           </a>
           <div class="flex gap-3 mt-4">
-            <NuxtLink to="/auth/login" class="btn-ghost flex-1 text-center">Войти</NuxtLink>
-            <NuxtLink to="/auth/register" class="btn-primary flex-1 text-center">Начать</NuxtLink>
+            <NuxtLink
+              to="/auth/login"
+              class="btn-ghost flex-1 text-center"
+            >Войти</NuxtLink>
+            <NuxtLink
+              to="/auth/register"
+              class="btn-primary flex-1 text-center"
+            >Начать</NuxtLink>
           </div>
         </nav>
       </Transition>
@@ -151,34 +181,63 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
     <!-- ══════════════ HERO ══════════════ -->
     <section class="hero">
       <div class="wrap-narrow text-center">
-        <div class="badge animate-fade-up" style="animation-delay: 0.1s">
+        <div
+          class="badge animate-fade-up"
+          style="animation-delay: 0.1s"
+        >
           ✦ Открытый бета-доступ
         </div>
 
-        <h1 class="hero-title animate-fade-up" style="animation-delay: 0.2s">
+        <h1
+          class="hero-title animate-fade-up"
+          style="animation-delay: 0.2s"
+        >
           Умная обработка<br>
           <span class="gradient-text">документов с ИИ</span>
         </h1>
 
-        <p class="hero-desc animate-fade-up" style="animation-delay: 0.3s">
+        <p
+          class="hero-desc animate-fade-up"
+          style="animation-delay: 0.3s"
+        >
           Загружайте, анализируйте и извлекайте данные из любых документов.<br>
           Self-hosted платформа на FastAPI + Nuxt 3, готовая к продакшну.
         </p>
 
-        <div class="hero-cta animate-fade-up" style="animation-delay: 0.4s">
-          <NuxtLink to="/auth/register" class="btn-primary btn-lg">
+        <div
+          class="hero-cta animate-fade-up"
+          style="animation-delay: 0.4s"
+        >
+          <NuxtLink
+            to="/auth/register"
+            class="btn-primary btn-lg"
+          >
             Начать бесплатно
             <span class="ml-1.5">→</span>
           </NuxtLink>
-          <button class="btn-outline btn-lg">Смотреть демо</button>
+          <button class="btn-outline btn-lg">
+            Смотреть демо
+          </button>
         </div>
 
         <!-- Mock UI card -->
-        <div class="glass-card mock-card animate-fade-up" style="animation-delay: 0.5s">
+        <div
+          class="glass-card mock-card animate-fade-up"
+          style="animation-delay: 0.5s"
+        >
           <div class="mock-bar">
-            <span class="mock-dot" style="background:#ef4444" />
-            <span class="mock-dot" style="background:#f59e0b" />
-            <span class="mock-dot" style="background:#22c55e" />
+            <span
+              class="mock-dot"
+              style="background:#ef4444"
+            />
+            <span
+              class="mock-dot"
+              style="background:#f59e0b"
+            />
+            <span
+              class="mock-dot"
+              style="background:#22c55e"
+            />
             <span class="mock-url">myapp.ru/dashboard</span>
           </div>
           <div class="mock-body">
@@ -207,7 +266,12 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
               <div class="glass-card h-24 p-3">
                 <div class="mock-item w-2/5 h-2 rounded mb-3" />
                 <div class="flex gap-1 items-end h-12">
-                  <div v-for="h in [30,55,40,70,50,80,60]" :key="h" class="mock-bar-item flex-1 rounded-t" :style="{ height: h + '%' }" />
+                  <div
+                    v-for="h in [30, 55, 40, 70, 50, 80, 60]"
+                    :key="h"
+                    class="mock-bar-item flex-1 rounded-t"
+                    :style="{ height: h + '%' }"
+                  />
                 </div>
               </div>
             </div>
@@ -217,11 +281,18 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
     </section>
 
     <!-- ══════════════ FEATURES ══════════════ -->
-    <section id="features" class="section">
+    <section
+      id="features"
+      class="section"
+    >
       <div class="wrap">
         <div class="section-head">
-          <div class="badge">Возможности</div>
-          <h2 class="section-title">Всё для работы с документами</h2>
+          <div class="badge">
+            Возможности
+          </div>
+          <h2 class="section-title">
+            Всё для работы с документами
+          </h2>
           <p class="section-desc">
             Платформа объединяет ИИ-анализ, семантический поиск<br>и автоматизацию в едином self-hosted решении
           </p>
@@ -233,9 +304,15 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
             :key="f.title"
             class="glass-card feature-card"
           >
-            <div class="feature-icon">{{ f.icon }}</div>
-            <h3 class="feature-title">{{ f.title }}</h3>
-            <p class="feature-desc">{{ f.desc }}</p>
+            <div class="feature-icon">
+              {{ f.icon }}
+            </div>
+            <h3 class="feature-title">
+              {{ f.title }}
+            </h3>
+            <p class="feature-desc">
+              {{ f.desc }}
+            </p>
             <div class="card-glow" />
           </div>
         </div>
@@ -243,12 +320,21 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
     </section>
 
     <!-- ══════════════ TECH STACK ══════════════ -->
-    <section id="tech" class="section">
+    <section
+      id="tech"
+      class="section"
+    >
       <div class="wrap">
         <div class="section-head">
-          <div class="badge">Технологии</div>
-          <h2 class="section-title">Проверенный стек</h2>
-          <p class="section-desc">Production-ready технологии без избыточных зависимостей</p>
+          <div class="badge">
+            Технологии
+          </div>
+          <h2 class="section-title">
+            Проверенный стек
+          </h2>
+          <p class="section-desc">
+            Production-ready технологии без избыточных зависимостей
+          </p>
         </div>
 
         <div class="tech-grid">
@@ -257,7 +343,10 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
             :key="t.label"
             class="glass-card tech-chip"
           >
-            <span class="tech-dot" :style="{ background: t.color }" />
+            <span
+              class="tech-dot"
+              :style="{ background: t.color }"
+            />
             {{ t.label }}
           </div>
         </div>
@@ -265,19 +354,31 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
     </section>
 
     <!-- ══════════════ CTA ══════════════ -->
-    <section id="contact" class="section">
+    <section
+      id="contact"
+      class="section"
+    >
       <div class="wrap-narrow">
         <div class="glass-card cta-card">
           <div class="cta-glow" />
-          <div class="badge mx-auto w-fit">Начните сегодня</div>
-          <h2 class="cta-title">Готовы к запуску?</h2>
+          <div class="badge mx-auto w-fit">
+            Начните сегодня
+          </div>
+          <h2 class="cta-title">
+            Готовы к запуску?
+          </h2>
           <p class="cta-desc">
             Разверните платформу на своём сервере за 5 минут.<br>
             Полный контроль над данными, без vendor lock-in.
           </p>
           <div class="hero-cta">
-            <NuxtLink to="/auth/register" class="btn-primary btn-lg">Получить доступ</NuxtLink>
-            <button class="btn-outline btn-lg">Документация</button>
+            <NuxtLink
+              to="/auth/register"
+              class="btn-primary btn-lg"
+            >Получить доступ</NuxtLink>
+            <button class="btn-outline btn-lg">
+              Документация
+            </button>
           </div>
         </div>
       </div>
@@ -298,7 +399,9 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
           </div>
 
           <div>
-            <h4 class="footer-col-title">Продукт</h4>
+            <h4 class="footer-col-title">
+              Продукт
+            </h4>
             <ul class="footer-links">
               <li><a href="#features">Возможности</a></li>
               <li><a href="#tech">Технологии</a></li>
@@ -308,7 +411,9 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
           </div>
 
           <div>
-            <h4 class="footer-col-title">Компания</h4>
+            <h4 class="footer-col-title">
+              Компания
+            </h4>
             <ul class="footer-links">
               <li><a href="#">О нас</a></li>
               <li><a href="#contact">Контакты</a></li>
@@ -318,7 +423,9 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
           </div>
 
           <div>
-            <h4 class="footer-col-title">Сообщество</h4>
+            <h4 class="footer-col-title">
+              Сообщество
+            </h4>
             <ul class="footer-links">
               <li><a href="#">GitHub</a></li>
               <li><a href="#">Telegram</a></li>

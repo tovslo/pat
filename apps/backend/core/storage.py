@@ -6,9 +6,9 @@ ref: spec.md → S3-Compatible Storage → aioboto3, Presigned URLs
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncGenerator
 
 import aioboto3
 from botocore.config import Config

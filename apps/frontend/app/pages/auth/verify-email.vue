@@ -3,7 +3,6 @@ definePageMeta({ layout: false, ssr: false })
 useSeoMeta({ title: 'Подтверждение email — MyApp' })
 
 const route = useRoute()
-const router = useRouter()
 
 const status = ref<'loading' | 'success' | 'error'>('loading')
 const errorMessage = ref('')
@@ -18,11 +17,10 @@ onMounted(async () => {
   try {
     await $fetch('/api/v1/auth/verify-email', {
       method: 'POST',
-      body: { token },
+      body: { token }
     })
     status.value = 'success'
-  }
-  catch (e: unknown) {
+  } catch (e: unknown) {
     const err = e as { data?: { detail?: string } }
     status.value = 'error'
     errorMessage.value = err?.data?.detail ?? 'Недействительная или устаревшая ссылка.'
@@ -33,33 +31,65 @@ onMounted(async () => {
 <template>
   <div class="auth-page">
     <div class="auth-card glass-card">
-      <NuxtLink to="/" class="logo-mark mb-6 inline-flex">
+      <NuxtLink
+        to="/"
+        class="logo-mark mb-6 inline-flex"
+      >
         <span class="logo-icon">◈</span>
         <span class="logo-text">MyApp</span>
       </NuxtLink>
 
       <!-- Loading -->
-      <div v-if="status === 'loading'" class="state-block">
+      <div
+        v-if="status === 'loading'"
+        class="state-block"
+      >
         <div class="spinner" />
-        <p class="state-text">Проверяем токен…</p>
+        <p class="state-text">
+          Проверяем токен…
+        </p>
       </div>
 
       <!-- Success -->
-      <div v-else-if="status === 'success'" class="state-block">
-        <div class="state-icon success">✓</div>
-        <h2 class="auth-title">Email подтверждён!</h2>
-        <p class="auth-sub">Ваш аккаунт активирован. Можете войти.</p>
-        <NuxtLink to="/auth/login" class="btn-primary btn-block mt-6">
+      <div
+        v-else-if="status === 'success'"
+        class="state-block"
+      >
+        <div class="state-icon success">
+          ✓
+        </div>
+        <h2 class="auth-title">
+          Email подтверждён!
+        </h2>
+        <p class="auth-sub">
+          Ваш аккаунт активирован. Можете войти.
+        </p>
+        <NuxtLink
+          to="/auth/login"
+          class="btn-primary btn-block mt-6"
+        >
           Войти
         </NuxtLink>
       </div>
 
       <!-- Error -->
-      <div v-else class="state-block">
-        <div class="state-icon error">✗</div>
-        <h2 class="auth-title">Ошибка подтверждения</h2>
-        <p class="auth-sub">{{ errorMessage }}</p>
-        <NuxtLink to="/auth/register" class="btn-primary btn-block mt-6">
+      <div
+        v-else
+        class="state-block"
+      >
+        <div class="state-icon error">
+          ✗
+        </div>
+        <h2 class="auth-title">
+          Ошибка подтверждения
+        </h2>
+        <p class="auth-sub">
+          {{ errorMessage }}
+        </p>
+        <NuxtLink
+          to="/auth/register"
+          class="btn-primary btn-block mt-6"
+        >
           Зарегистрироваться снова
         </NuxtLink>
       </div>

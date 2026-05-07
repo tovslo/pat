@@ -6,5 +6,5 @@ export default defineNuxtPlugin({
   setup(nuxtApp) {
     const pinia = createPinia()
     nuxtApp.vueApp.use(pinia)
-  },
+  }
 })

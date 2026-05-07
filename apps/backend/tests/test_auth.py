@@ -1,11 +1,11 @@
 """Tests for /api/v1/auth endpoints."""
+from unittest.mock import patch
+
 import pytest
 from httpx import AsyncClient
-from unittest.mock import patch
 
 from app.core.security import create_email_token, hash_password
 from app.models.user import User
-
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 

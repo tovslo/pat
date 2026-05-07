@@ -7,7 +7,7 @@ useSeoMeta({ title: 'Вход — MyApp' })
 
 const schema = z.object({
   email: z.string().email('Введите корректный email'),
-  password: z.string().min(1, 'Введите пароль'),
+  password: z.string().min(1, 'Введите пароль')
 })
 
 const form = reactive({ email: '', password: '' })
@@ -40,20 +40,16 @@ async function onSubmit() {
   try {
     await auth.login(form.email, form.password)
     await navigateTo('/dashboard')
-  }
-  catch (e: unknown) {
+  } catch (e: unknown) {
     const err = e as { data?: { detail?: string }, status?: number }
     if (err?.status === 403) {
       showUnverifiedWarning.value = true
-    }
-    else if (err?.status === 401) {
+    } else if (err?.status === 401) {
       serverError.value = 'Неверный email или пароль.'
-    }
-    else {
+    } else {
       serverError.value = err?.data?.detail ?? 'Ошибка входа. Попробуйте позже.'
     }
-  }
-  finally {
+  } finally {
     submitting.value = false
   }
 }
@@ -62,17 +58,28 @@ async function onSubmit() {
 <template>
   <div class="auth-page">
     <div class="auth-card glass-card">
-      <NuxtLink to="/" class="logo-mark mb-6 inline-flex">
+      <NuxtLink
+        to="/"
+        class="logo-mark mb-6 inline-flex"
+      >
         <span class="logo-icon">◈</span>
         <span class="logo-text">MyApp</span>
       </NuxtLink>
 
-      <h2 class="auth-title">Войти в аккаунт</h2>
+      <h2 class="auth-title">
+        Войти в аккаунт
+      </h2>
       <p class="auth-sub">
-        Нет аккаунта? <NuxtLink to="/auth/register" class="link">Зарегистрироваться</NuxtLink>
+        Нет аккаунта? <NuxtLink
+          to="/auth/register"
+          class="link"
+        >Зарегистрироваться</NuxtLink>
       </p>
 
-      <div v-if="showUnverifiedWarning" class="warning-block">
+      <div
+        v-if="showUnverifiedWarning"
+        class="warning-block"
+      >
         <span class="warning-icon">⚠</span>
         <div>
           <strong>Email не подтверждён.</strong><br>
@@ -80,9 +87,16 @@ async function onSubmit() {
         </div>
       </div>
 
-      <form class="auth-form" novalidate @submit.prevent="onSubmit">
+      <form
+        class="auth-form"
+        novalidate
+        @submit.prevent="onSubmit"
+      >
         <div class="field">
-          <label class="field-label" for="login-email">Email</label>
+          <label
+            class="field-label"
+            for="login-email"
+          >Email</label>
           <input
             id="login-email"
             v-model.trim="form.email"
@@ -92,11 +106,17 @@ async function onSubmit() {
             class="field-input"
             :class="{ error: errors.email }"
           >
-          <span v-if="errors.email" class="field-error">{{ errors.email }}</span>
+          <span
+            v-if="errors.email"
+            class="field-error"
+          >{{ errors.email }}</span>
         </div>
 
         <div class="field">
-          <label class="field-label" for="login-password">Пароль</label>
+          <label
+            class="field-label"
+            for="login-password"
+          >Пароль</label>
           <input
             id="login-password"
             v-model="form.password"
@@ -106,14 +126,24 @@ async function onSubmit() {
             class="field-input"
             :class="{ error: errors.password }"
           >
-          <span v-if="errors.password" class="field-error">{{ errors.password }}</span>
+          <span
+            v-if="errors.password"
+            class="field-error"
+          >{{ errors.password }}</span>
         </div>
 
-        <div v-if="serverError" class="server-error">
+        <div
+          v-if="serverError"
+          class="server-error"
+        >
           {{ serverError }}
         </div>
 
-        <button type="submit" class="btn-primary btn-block" :disabled="submitting">
+        <button
+          type="submit"
+          class="btn-primary btn-block"
+          :disabled="submitting"
+        >
           <span v-if="submitting">Вход…</span>
           <span v-else>Войти</span>
         </button>

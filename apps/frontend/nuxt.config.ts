@@ -2,23 +2,17 @@
 export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
-    '@nuxt/ui',
+    '@nuxt/ui'
   ],
 
   devtools: {
-    enabled: true,
+    enabled: true
   },
 
   css: ['~/assets/css/main.css'],
 
   routeRules: {
-    '/': { prerender: true },
-  },
-
-  vite: {
-    optimizeDeps: {
-      include: ['vee-validate', '@vee-validate/zod', 'zod', 'pinia', '@vue/devtools-api'],
-    },
+    '/': { prerender: true }
   },
 
   compatibilityDate: '2025-01-15',
@@ -27,16 +21,22 @@ export default defineNuxtConfig({
   nitro: {
     devProxy: {
       '/api': { target: 'http://localhost:8000/api', changeOrigin: true, ws: true },
-      '/ws': { target: 'http://localhost:8000/ws', changeOrigin: true, ws: true },
-    },
+      '/ws': { target: 'http://localhost:8000/ws', changeOrigin: true, ws: true }
+    }
+  },
+
+  vite: {
+    optimizeDeps: {
+      include: ['vee-validate', '@vee-validate/zod', 'zod', 'pinia', '@vue/devtools-api']
+    }
   },
 
   eslint: {
     config: {
       stylistic: {
         commaDangle: 'never',
-        braceStyle: '1tbs',
-      },
-    },
-  },
+        braceStyle: '1tbs'
+      }
+    }
+  }
 })

@@ -8,10 +8,10 @@ useSeoMeta({ title: 'Регистрация — MyApp' })
 const schema = z.object({
   email: z.string().email('Введите корректный email'),
   password: z.string().min(8, 'Минимум 8 символов'),
-  confirm: z.string(),
-}).refine((d) => d.password === d.confirm, {
+  confirm: z.string()
+}).refine(d => d.password === d.confirm, {
   message: 'Пароли не совпадают',
-  path: ['confirm'],
+  path: ['confirm']
 })
 
 const form = reactive({ email: '', password: '', confirm: '' })
@@ -46,12 +46,10 @@ async function onSubmit() {
     await auth.register(form.email, form.password)
     submittedEmail.value = form.email
     success.value = true
-  }
-  catch (e: unknown) {
+  } catch (e: unknown) {
     const err = e as { data?: { detail?: string } }
     serverError.value = err?.data?.detail ?? 'Ошибка регистрации. Попробуйте позже.'
-  }
-  finally {
+  } finally {
     submitting.value = false
   }
 }
@@ -60,32 +58,56 @@ async function onSubmit() {
 <template>
   <div class="auth-page">
     <div class="auth-card glass-card">
-      <NuxtLink to="/" class="logo-mark mb-6 inline-flex">
+      <NuxtLink
+        to="/"
+        class="logo-mark mb-6 inline-flex"
+      >
         <span class="logo-icon">◈</span>
         <span class="logo-text">MyApp</span>
       </NuxtLink>
 
       <template v-if="success">
         <div class="success-block">
-          <div class="success-icon">✉</div>
-          <h2 class="auth-title">Проверьте почту</h2>
+          <div class="success-icon">
+            ✉
+          </div>
+          <h2 class="auth-title">
+            Проверьте почту
+          </h2>
           <p class="auth-sub">
             Мы отправили письмо с подтверждением на <strong>{{ submittedEmail }}</strong>.<br>
             Перейдите по ссылке в письме, чтобы активировать аккаунт.
           </p>
-          <NuxtLink to="/auth/login" class="btn-primary btn-block mt-6">
+          <NuxtLink
+            to="/auth/login"
+            class="btn-primary btn-block mt-6"
+          >
             Войти
           </NuxtLink>
         </div>
       </template>
 
       <template v-else>
-        <h2 class="auth-title">Создать аккаунт</h2>
-        <p class="auth-sub">Уже есть аккаунт? <NuxtLink to="/auth/login" class="link">Войти</NuxtLink></p>
+        <h2 class="auth-title">
+          Создать аккаунт
+        </h2>
+        <p class="auth-sub">
+          Уже есть аккаунт? <NuxtLink
+            to="/auth/login"
+            class="link"
+          >Войти</NuxtLink>
+        </p>
 
-        <form class="auth-form" novalidate @submit.prevent="onSubmit">
+        <form
+          class="auth-form"
+          novalidate
+          @submit.prevent="onSubmit"
+        >
           <div class="field">
-            <label class="field-label" for="reg-email">Email</label>
+            <label
+              class="field-label"
+              for="reg-email"
+            >Email</label>
             <input
               id="reg-email"
               v-model.trim="form.email"
@@ -95,11 +117,17 @@ async function onSubmit() {
               class="field-input"
               :class="{ error: errors.email }"
             >
-            <span v-if="errors.email" class="field-error">{{ errors.email }}</span>
+            <span
+              v-if="errors.email"
+              class="field-error"
+            >{{ errors.email }}</span>
           </div>
 
           <div class="field">
-            <label class="field-label" for="reg-password">Пароль</label>
+            <label
+              class="field-label"
+              for="reg-password"
+            >Пароль</label>
             <input
               id="reg-password"
               v-model="form.password"
@@ -109,11 +137,17 @@ async function onSubmit() {
               class="field-input"
               :class="{ error: errors.password }"
             >
-            <span v-if="errors.password" class="field-error">{{ errors.password }}</span>
+            <span
+              v-if="errors.password"
+              class="field-error"
+            >{{ errors.password }}</span>
           </div>
 
           <div class="field">
-            <label class="field-label" for="reg-confirm">Повторите пароль</label>
+            <label
+              class="field-label"
+              for="reg-confirm"
+            >Повторите пароль</label>
             <input
               id="reg-confirm"
               v-model="form.confirm"
@@ -123,14 +157,24 @@ async function onSubmit() {
               class="field-input"
               :class="{ error: errors.confirm }"
             >
-            <span v-if="errors.confirm" class="field-error">{{ errors.confirm }}</span>
+            <span
+              v-if="errors.confirm"
+              class="field-error"
+            >{{ errors.confirm }}</span>
           </div>
 
-          <div v-if="serverError" class="server-error">
+          <div
+            v-if="serverError"
+            class="server-error"
+          >
             {{ serverError }}
           </div>
 
-          <button type="submit" class="btn-primary btn-block" :disabled="submitting">
+          <button
+            type="submit"
+            class="btn-primary btn-block"
+            :disabled="submitting"
+          >
             <span v-if="submitting">Регистрация…</span>
             <span v-else>Создать аккаунт</span>
           </button>

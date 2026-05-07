@@ -1,4 +1,4 @@
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from fastapi import Cookie, Depends, HTTPException, status
 from jose import JWTError

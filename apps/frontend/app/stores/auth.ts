@@ -14,12 +14,12 @@ interface AuthState {
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     user: null,
-    pending: false,
+    pending: false
   }),
 
   getters: {
-    isLoggedIn: (state) => state.user !== null,
-    isVerified: (state) => state.user?.isVerified ?? false,
+    isLoggedIn: state => state.user !== null,
+    isVerified: state => state.user?.isVerified ?? false
   },
 
   actions: {
@@ -28,10 +28,9 @@ export const useAuthStore = defineStore('auth', {
       try {
         await $fetch('/api/v1/auth/register', {
           method: 'POST',
-          body: { email, password },
+          body: { email, password }
         })
-      }
-      finally {
+      } finally {
         this.pending = false
       }
     },
@@ -42,11 +41,10 @@ export const useAuthStore = defineStore('auth', {
         const data = await $fetch<AuthUser>('/api/v1/auth/login', {
           method: 'POST',
           body: { email, password },
-          credentials: 'include',
+          credentials: 'include'
         })
         this.user = data
-      }
-      finally {
+      } finally {
         this.pending = false
       }
     },
@@ -60,10 +58,9 @@ export const useAuthStore = defineStore('auth', {
       try {
         const data = await $fetch<AuthUser>('/api/v1/auth/me', { credentials: 'include' })
         this.user = data
-      }
-      catch {
+      } catch {
         this.user = null
       }
-    },
-  },
+    }
+  }
 })

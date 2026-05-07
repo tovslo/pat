@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
 from jose import JWTError, jwt
@@ -15,7 +15,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_access_token(subject: str, expires_delta: timedelta | None = None) -> str:
-    expire = datetime.now(timezone.utc) + (
+    expire = datetime.now(UTC) + (
         expires_delta or timedelta(minutes=settings.jwt_expire_minutes)
     )
     return jwt.encode(
@@ -26,7 +26,7 @@ def create_access_token(subject: str, expires_delta: timedelta | None = None) ->
 
 
 def create_email_token(email: str, expires_hours: int = 24) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(hours=expires_hours)
+    expire = datetime.now(UTC) + timedelta(hours=expires_hours)
     return jwt.encode(
         {"sub": email, "purpose": "email_verify", "exp": expire},
         settings.jwt_secret,
