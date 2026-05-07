@@ -4,6 +4,7 @@ export interface AuthUser {
   id: string
   email: string
   isVerified: boolean
+  avatarUrl: string | null
 }
 
 interface AuthState {
@@ -23,12 +24,17 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    async register(email: string, password: string) {
+    async register(email: string, password: string, avatar?: File | null) {
       this.pending = true
       try {
+        const formData = new FormData()
+        formData.append('email', email)
+        formData.append('password', password)
+        if (avatar) formData.append('avatar', avatar)
+
         await $fetch('/api/v1/auth/register', {
           method: 'POST',
-          body: { email, password }
+          body: formData
         })
       } finally {
         this.pending = false
@@ -61,6 +67,17 @@ export const useAuthStore = defineStore('auth', {
       } catch {
         this.user = null
       }
+    },
+
+    async uploadAvatar(file: File) {
+      const formData = new FormData()
+      formData.append('avatar', file)
+      const data = await $fetch<AuthUser>('/api/v1/auth/avatar', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      })
+      this.user = data
     }
   }
 })

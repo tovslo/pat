@@ -1,6 +1,7 @@
 """Tests for /api/v1/auth endpoints."""
 
-from unittest.mock import patch
+from io import BytesIO
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -29,6 +30,10 @@ async def _create_unverified_user(
     return user
 
 
+def _register_data(email: str, password: str):
+    return {"data": {"email": email, "password": password}}
+
+
 # ── register ──────────────────────────────────────────────────────────────────
 
 
@@ -38,10 +43,7 @@ async def test_register_success(client: AsyncClient):
         mock_task.delay = lambda *a, **kw: None
         resp = await client.post(
             "/api/v1/auth/register",
-            json={
-                "email": "new@example.com",
-                "password": "securepassword",
-            },
+            data={"email": "new@example.com", "password": "securepassword"},
         )
     assert resp.status_code == 201
     assert "подтвержден" in resp.json()["detail"]
@@ -54,10 +56,7 @@ async def test_register_duplicate_email(client: AsyncClient, db_session):
         mock_task.delay = lambda *a, **kw: None
         resp = await client.post(
             "/api/v1/auth/register",
-            json={
-                "email": "dup@example.com",
-                "password": "securepassword",
-            },
+            data={"email": "dup@example.com", "password": "securepassword"},
         )
     assert resp.status_code == 409
 
@@ -66,10 +65,7 @@ async def test_register_duplicate_email(client: AsyncClient, db_session):
 async def test_register_short_password(client: AsyncClient):
     resp = await client.post(
         "/api/v1/auth/register",
-        json={
-            "email": "short@example.com",
-            "password": "abc",
-        },
+        data={"email": "short@example.com", "password": "abc"},
     )
     assert resp.status_code == 422
 
@@ -78,12 +74,31 @@ async def test_register_short_password(client: AsyncClient):
 async def test_register_invalid_email(client: AsyncClient):
     resp = await client.post(
         "/api/v1/auth/register",
-        json={
-            "email": "not-an-email",
-            "password": "password123",
-        },
+        data={"email": "not-an-email", "password": "password123"},
     )
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_register_with_avatar(client: AsyncClient):
+    minimal_png = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00"
+        b"\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+        b"\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    with (
+        patch("app.api.v1.auth.send_verification_email") as mock_task,
+        patch("app.api.v1.auth.upload_avatar", new_callable=AsyncMock) as mock_upload,
+    ):
+        mock_task.delay = lambda *a, **kw: None
+        mock_upload.return_value = "http://localhost:9000/myapp-dev/public/avatars/test.png"
+        resp = await client.post(
+            "/api/v1/auth/register",
+            data={"email": "avatar@example.com", "password": "securepassword"},
+            files={"avatar": ("avatar.png", BytesIO(minimal_png), "image/png")},
+        )
+    assert resp.status_code == 201
 
 
 # ── login ─────────────────────────────────────────────────────────────────────
@@ -103,6 +118,7 @@ async def test_login_success(client: AsyncClient, db_session):
     body = resp.json()
     assert body["email"] == "user@example.com"
     assert body["isVerified"] is True
+    assert "avatarUrl" in body
     assert "access_token" in resp.cookies
 
 
@@ -188,7 +204,9 @@ async def test_me_authenticated(client: AsyncClient, db_session):
 
     me_resp = await client.get("/api/v1/auth/me")
     assert me_resp.status_code == 200
-    assert me_resp.json()["email"] == "user@example.com"
+    body = me_resp.json()
+    assert body["email"] == "user@example.com"
+    assert "avatarUrl" in body
 
 
 @pytest.mark.asyncio
@@ -211,3 +229,41 @@ async def test_logout_clears_cookie(client: AsyncClient, db_session):
     assert resp.status_code == 200
     me_resp = await client.get("/api/v1/auth/me")
     assert me_resp.status_code == 401
+
+
+# ── avatar upload ─────────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_update_avatar_authenticated(client: AsyncClient, db_session):
+    await _create_verified_user(db_session)
+    await client.post(
+        "/api/v1/auth/login",
+        json={"email": "user@example.com", "password": "password123"},
+    )
+
+    minimal_png = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00"
+        b"\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    with patch("app.api.v1.auth.upload_avatar", new_callable=AsyncMock) as mock_upload:
+        mock_upload.return_value = "http://localhost:9000/myapp-dev/public/avatars/test.png"
+        resp = await client.post(
+            "/api/v1/auth/avatar",
+            files={"avatar": ("avatar.png", BytesIO(minimal_png), "image/png")},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["avatarUrl"] == "http://localhost:9000/myapp-dev/public/avatars/test.png"
+
+
+@pytest.mark.asyncio
+async def test_update_avatar_unauthenticated(client: AsyncClient):
+    minimal_png = b"\x89PNG\r\n\x1a\n"
+    resp = await client.post(
+        "/api/v1/auth/avatar",
+        files={"avatar": ("avatar.png", BytesIO(minimal_png), "image/png")},
+    )
+    assert resp.status_code == 401

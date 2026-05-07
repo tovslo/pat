@@ -26,6 +26,7 @@ class UserResponse(BaseModel):
     id: str
     email: str
     isVerified: bool
+    avatarUrl: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -34,4 +35,4 @@ class UserResponse(BaseModel):
         from app.models.user import User as UserModel
 
         u: UserModel = user  # type: ignore[assignment]
-        return cls(id=u.id, email=u.email, isVerified=u.is_verified)
+        return cls(id=u.id, email=u.email, isVerified=u.is_verified, avatarUrl=u.avatar_url)

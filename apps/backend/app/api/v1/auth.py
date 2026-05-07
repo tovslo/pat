@@ -1,7 +1,9 @@
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from jose import JWTError
+from pydantic import EmailStr, TypeAdapter
+from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,10 +19,10 @@ from app.core.security import (
 from app.models.user import User
 from app.schemas.auth import (
     LoginRequest,
-    RegisterRequest,
     UserResponse,
     VerifyEmailRequest,
 )
+from app.services.s3 import upload_avatar
 from app.tasks.email import send_verification_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -33,6 +35,8 @@ _COOKIE_OPTS = {
     "max_age": settings.jwt_expire_minutes * 60,
 }
 
+_email_adapter = TypeAdapter(EmailStr)
+
 
 def _verification_url(token: str) -> str:
     base = settings.frontend_url.rstrip("/")
@@ -41,22 +45,47 @@ def _verification_url(token: str) -> str:
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
-    body: RegisterRequest,
+    email: str = Form(...),
+    password: str = Form(...),
+    avatar: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    existing = await db.scalar(select(User).where(User.email == body.email))
+    try:
+        _email_adapter.validate_python(email)
+    except PydanticValidationError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Введите корректный email"
+        ) from None
+
+    if len(password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Пароль должен содержать минимум 8 символов",
+        )
+
+    existing = await db.scalar(select(User).where(User.email == email))
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Email уже зарегистрирован"
         )
 
-    user = User(email=body.email, hashed_password=hash_password(body.password))
+    user = User(email=email, hashed_password=hash_password(password))
     db.add(user)
+    await db.flush()  # get user.id before committing
+
+    if avatar and avatar.content_type:
+        data = await avatar.read()
+        try:
+            avatar_url = await upload_avatar(data, avatar.content_type, user.id)
+            user.avatar_url = avatar_url
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
     await db.commit()
 
-    token = create_email_token(body.email)
+    token = create_email_token(email)
     url = _verification_url(token)
-    send_verification_email.delay(body.email, url)
+    send_verification_email.delay(email, url)
 
     return {"detail": "Письмо с подтверждением отправлено"}
 
@@ -117,4 +146,22 @@ async def verify_email(
 async def me(
     current_user: User = Depends(get_current_user),
 ) -> UserResponse:
+    return UserResponse.from_orm_user(current_user)
+
+
+@router.post("/avatar")
+async def update_avatar(
+    avatar: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserResponse:
+    data = await avatar.read()
+    try:
+        avatar_url = await upload_avatar(data, avatar.content_type or "", current_user.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    current_user.avatar_url = avatar_url
+    await db.commit()
+    await db.refresh(current_user)
     return UserResponse.from_orm_user(current_user)

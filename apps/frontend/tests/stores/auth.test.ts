@@ -18,18 +18,30 @@ describe('useAuthStore', () => {
     expect(auth.user).toBeNull()
   })
 
-  it('register: calls POST /api/v1/auth/register', async () => {
+  it('register: calls POST /api/v1/auth/register with FormData', async () => {
     mockFetch.mockResolvedValueOnce({})
     const auth = useAuthStore()
     await auth.register('user@example.com', 'password123')
-    expect(mockFetch).toHaveBeenCalledWith('/api/v1/auth/register', {
-      method: 'POST',
-      body: { email: 'user@example.com', password: 'password123' }
-    })
+    expect(mockFetch).toHaveBeenCalledOnce()
+    const [url, opts] = mockFetch.mock.calls[0]
+    expect(url).toBe('/api/v1/auth/register')
+    expect(opts.method).toBe('POST')
+    expect(opts.body).toBeInstanceOf(FormData)
+    expect(opts.body.get('email')).toBe('user@example.com')
+    expect(opts.body.get('password')).toBe('password123')
+  })
+
+  it('register: appends avatar to FormData when provided', async () => {
+    mockFetch.mockResolvedValueOnce({})
+    const auth = useAuthStore()
+    const file = new File(['data'], 'avatar.png', { type: 'image/png' })
+    await auth.register('user@example.com', 'password123', file)
+    const [, opts] = mockFetch.mock.calls[0]
+    expect(opts.body.get('avatar')).toBe(file)
   })
 
   it('login: sets user on success', async () => {
-    const fakeUser = { id: '1', email: 'user@example.com', isVerified: true }
+    const fakeUser = { id: '1', email: 'user@example.com', isVerified: true, avatarUrl: null }
     mockFetch.mockResolvedValueOnce(fakeUser)
     const auth = useAuthStore()
     await auth.login('user@example.com', 'password123')
@@ -48,7 +60,7 @@ describe('useAuthStore', () => {
 
   it('logout: clears user', async () => {
     const auth = useAuthStore()
-    auth.user = { id: '1', email: 'user@example.com', isVerified: true }
+    auth.user = { id: '1', email: 'user@example.com', isVerified: true, avatarUrl: null }
     mockFetch.mockResolvedValueOnce({})
     await auth.logout()
     expect(auth.user).toBeNull()
@@ -56,7 +68,7 @@ describe('useAuthStore', () => {
   })
 
   it('fetchMe: sets user on success', async () => {
-    const fakeUser = { id: '2', email: 'a@b.com', isVerified: false }
+    const fakeUser = { id: '2', email: 'a@b.com', isVerified: false, avatarUrl: null }
     mockFetch.mockResolvedValueOnce(fakeUser)
     const auth = useAuthStore()
     await auth.fetchMe()
@@ -66,14 +78,14 @@ describe('useAuthStore', () => {
   it('fetchMe: silently clears user on 401', async () => {
     mockFetch.mockRejectedValueOnce({ status: 401 })
     const auth = useAuthStore()
-    auth.user = { id: '1', email: 'x@y.com', isVerified: true }
+    auth.user = { id: '1', email: 'x@y.com', isVerified: true, avatarUrl: null }
     await auth.fetchMe()
     expect(auth.user).toBeNull()
   })
 
   it('isVerified: false when user not verified', () => {
     const auth = useAuthStore()
-    auth.user = { id: '1', email: 'x@y.com', isVerified: false }
+    auth.user = { id: '1', email: 'x@y.com', isVerified: false, avatarUrl: null }
     expect(auth.isVerified).toBe(false)
   })
 
@@ -83,7 +95,7 @@ describe('useAuthStore', () => {
     const auth = useAuthStore()
     const loginPromise = auth.login('user@example.com', 'pass')
     expect(auth.pending).toBe(true)
-    resolveFetch({ id: '1', email: 'user@example.com', isVerified: true })
+    resolveFetch({ id: '1', email: 'user@example.com', isVerified: true, avatarUrl: null })
     await loginPromise
     expect(auth.pending).toBe(false)
   })

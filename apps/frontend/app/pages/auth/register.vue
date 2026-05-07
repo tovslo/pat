@@ -21,6 +21,20 @@ const serverError = ref('')
 const success = ref(false)
 const submittedEmail = ref('')
 
+const avatarFile = ref<File | null>(null)
+const avatarPreview = ref<string | null>(null)
+
+function onAvatarChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0] ?? null
+  avatarFile.value = file
+  if (file) {
+    avatarPreview.value = URL.createObjectURL(file)
+  } else {
+    avatarPreview.value = null
+  }
+}
+
 function validate(): boolean {
   errors.email = ''
   errors.password = ''
@@ -43,7 +57,7 @@ async function onSubmit() {
   submitting.value = true
   serverError.value = ''
   try {
-    await auth.register(form.email, form.password)
+    await auth.register(form.email, form.password, avatarFile.value)
     submittedEmail.value = form.email
     success.value = true
   } catch (e: unknown) {
@@ -103,6 +117,34 @@ async function onSubmit() {
           novalidate
           @submit.prevent="onSubmit"
         >
+          <!-- Avatar upload -->
+          <div class="field avatar-field">
+            <label class="field-label">Аватарка (необязательно)</label>
+            <label class="avatar-upload-label">
+              <div class="avatar-preview">
+                <img
+                  v-if="avatarPreview"
+                  :src="avatarPreview"
+                  class="avatar-img"
+                  alt="Предпросмотр аватарки"
+                >
+                <div
+                  v-else
+                  class="avatar-placeholder"
+                >
+                  <span class="avatar-plus">+</span>
+                  <span class="avatar-hint">Загрузить фото</span>
+                </div>
+              </div>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                class="avatar-input"
+                @change="onAvatarChange"
+              >
+            </label>
+          </div>
+
           <div class="field">
             <label
               class="field-label"
@@ -252,4 +294,30 @@ async function onSubmit() {
 .success-block { text-align: center; }
 .success-icon { font-size: 3rem; margin-bottom: 1rem; }
 .mt-6 { margin-top: 1.5rem; }
+
+/* Avatar upload */
+.avatar-field { align-items: center; }
+.avatar-upload-label { cursor: pointer; }
+.avatar-preview {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: 2px dashed rgba(139,92,246,.4);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(139,92,246,.08);
+  transition: border-color .2s, background .2s;
+}
+.avatar-upload-label:hover .avatar-preview {
+  border-color: rgba(139,92,246,.8);
+  background: rgba(139,92,246,.14);
+}
+.avatar-img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-placeholder { display: flex; flex-direction: column; align-items: center; gap: .2rem; }
+.avatar-plus { font-size: 1.5rem; color: rgba(139,92,246,.7); line-height: 1; }
+.avatar-hint { font-size: .65rem; color: rgba(255,255,255,.4); text-align: center; }
+.avatar-input { display: none; }
 </style>

@@ -39,7 +39,7 @@ async function onSubmit() {
   showUnverifiedWarning.value = false
   try {
     await auth.login(form.email, form.password)
-    await navigateTo('/dashboard')
+    await navigateTo('/')
   } catch (e: unknown) {
     const err = e as { data?: { detail?: string }, status?: number }
     if (err?.status === 403) {

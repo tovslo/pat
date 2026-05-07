@@ -1,10 +1,20 @@
 <script setup lang="ts">
+import { useAuthStore } from '~/stores/auth'
+
 definePageMeta({ layout: false })
 
 useSeoMeta({
   title: 'MyApp — ИИ-платформа для документов',
   description: 'Self-hosted платформа для анализа, поиска и автоматизации работы с документами на базе FastAPI и Nuxt 3.'
 })
+
+const auth = useAuthStore()
+
+const DEFAULT_AVATAR = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%236d28d9\'/%3E%3Ccircle cx=\'20\' cy=\'16\' r=\'7\' fill=\'%23fff\' fill-opacity=\'.85\'/%3E%3Cellipse cx=\'20\' cy=\'36\' rx=\'13\' ry=\'9\' fill=\'%23fff\' fill-opacity=\'.85\'/%3E%3C/svg%3E'
+
+async function handleLogout() {
+  await auth.logout()
+}
 
 const navLinks = [
   { label: 'Возможности', href: '#features' },
@@ -118,14 +128,29 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
 
         <!-- Actions -->
         <div class="header-actions">
+          <div
+            v-if="auth.isLoggedIn"
+            class="user-pill"
+          >
+            <img
+              :src="auth.user?.avatarUrl || DEFAULT_AVATAR"
+              class="user-avatar"
+              alt="Аватарка"
+            >
+            <span class="user-email">{{ auth.user?.email }}</span>
+          </div>
+          <button
+            v-if="auth.isLoggedIn"
+            class="btn-danger"
+            @click="handleLogout"
+          >
+            Выйти
+          </button>
           <NuxtLink
+            v-else
             to="/auth/login"
             class="btn-ghost"
           >Войти</NuxtLink>
-          <NuxtLink
-            to="/auth/register"
-            class="btn-primary"
-          >Начать бесплатно</NuxtLink>
 
           <!-- Burger (mobile) -->
           <button
@@ -164,15 +189,29 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
           >
             {{ link.label }}
           </a>
-          <div class="flex gap-3 mt-4">
-            <NuxtLink
-              to="/auth/login"
-              class="btn-ghost flex-1 text-center"
-            >Войти</NuxtLink>
-            <NuxtLink
-              to="/auth/register"
-              class="btn-primary flex-1 text-center"
-            >Начать</NuxtLink>
+          <div class="flex gap-3 mt-4 items-center">
+            <template v-if="auth.isLoggedIn">
+              <div class="mobile-user-info flex-1">
+                <img
+                  :src="auth.user?.avatarUrl || DEFAULT_AVATAR"
+                  class="user-avatar"
+                  alt="Аватарка"
+                >
+                <span class="mobile-user-email">{{ auth.user?.email }}</span>
+              </div>
+              <button
+                class="btn-danger"
+                @click="handleLogout; mobileMenuOpen = false"
+              >
+                Выйти
+              </button>
+            </template>
+            <template v-else>
+              <NuxtLink
+                to="/auth/login"
+                class="btn-ghost flex-1 text-center"
+              >Войти</NuxtLink>
+            </template>
           </div>
         </nav>
       </Transition>
@@ -656,6 +695,24 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
 }
 .btn-primary:active { transform: translateY(0); }
 
+.btn-danger {
+  padding: 0.45rem 1rem;
+  border-radius: 0.65rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.15s;
+}
+.btn-danger:hover {
+  color: #fff;
+  background: rgba(239, 68, 68, 0.75);
+  border-color: rgba(239, 68, 68, 0.8);
+  transform: translateY(-1px);
+}
+
 .btn-outline {
   padding: 0.45rem 1.1rem;
   border-radius: 0.65rem;
@@ -676,6 +733,46 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
 }
 
 .btn-lg { padding: 0.75rem 1.75rem; font-size: 1rem; border-radius: 0.85rem; }
+
+/* ── User pill (header) ── */
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+  border-radius: 2rem;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+}
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.user-email {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,.75);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Mobile user info ── */
+.mobile-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.mobile-user-email {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,.7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* ── Burger ── */
 .burger {

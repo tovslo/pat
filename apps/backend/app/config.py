@@ -34,9 +34,12 @@ class Settings(BaseSettings):
 
     # S3 — ref: spec.md → S3-Compatible Storage
     s3_endpoint_url: str = "http://localhost:9000"
+    s3_public_url: str = "http://localhost:9000"
     s3_region: str = "us-east-1"
     s3_bucket_name: str = "myapp-dev"
     s3_addressing_style: str = "path"
+    s3_access_key: str = "minioadmin"
+    s3_secret_key: str = "minioadmin"
 
     # Email (SMTP) — dev: Mailpit :1025, prod: Mailgun/SendGrid/SES SMTP
     smtp_host: str = "localhost"
