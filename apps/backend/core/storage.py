@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 import aioboto3
@@ -97,10 +97,8 @@ async def delete_object(file_key: str) -> None:
     ref: spec.md → files: auto-cleanup on completion/failure
     """
     async with s3_client() as s3:
-        try:
+        with suppress(ClientError):
             await s3.delete_object(Bucket=BUCKET, Key=file_key)
-        except ClientError:
-            pass  # already deleted or never existed — safe to ignore
 
 
 async def set_lifecycle_policy() -> None:

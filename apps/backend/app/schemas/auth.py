@@ -32,5 +32,6 @@ class UserResponse(BaseModel):
     @classmethod
     def from_orm_user(cls, user: object) -> "UserResponse":
         from app.models.user import User as UserModel
+
         u: UserModel = user  # type: ignore[assignment]
         return cls(id=u.id, email=u.email, isVerified=u.is_verified)

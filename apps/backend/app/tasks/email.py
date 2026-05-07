@@ -25,10 +25,7 @@ def send_verification_email(to_email: str, verification_url: str) -> None:
     <p>Если вы не регистрировались — просто проигнорируйте это письмо.</p>
     </body></html>
     """
-    text_body = (
-        f"Подтвердите ваш email MyApp: {verification_url}\n"
-        "Ссылка действительна 24 часа."
-    )
+    text_body = f"Подтвердите ваш email MyApp: {verification_url}\nСсылка действительна 24 часа."
 
     with httpx.Client(timeout=10) as client:
         resp = client.post(

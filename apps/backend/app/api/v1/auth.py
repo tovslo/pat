@@ -46,7 +46,9 @@ async def register(
 ) -> dict:
     existing = await db.scalar(select(User).where(User.email == body.email))
     if existing:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email уже зарегистрирован")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Email уже зарегистрирован"
+        )
 
     user = User(email=body.email, hashed_password=hash_password(body.password))
     db.add(user)
@@ -67,7 +69,9 @@ async def login(
 ) -> UserResponse:
     user = await db.scalar(select(User).where(User.email == body.email))
     if not user or not verify_password(body.password, user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный email или пароль")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный email или пароль"
+        )
 
     if not user.is_verified:
         raise HTTPException(
@@ -94,7 +98,9 @@ async def verify_email(
     try:
         email = decode_email_token(body.token)
     except JWTError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Недействительная или устаревшая ссылка")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Недействительная или устаревшая ссылка"
+        ) from None
 
     user = await db.scalar(select(User).where(User.email == email))
     if not user:

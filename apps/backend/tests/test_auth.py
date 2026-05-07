@@ -1,4 +1,5 @@
 """Tests for /api/v1/auth endpoints."""
+
 from unittest.mock import patch
 
 import pytest
@@ -9,6 +10,7 @@ from app.models.user import User
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
+
 async def _create_verified_user(db_session, email="user@example.com", password="password123"):
     user = User(email=email, hashed_password=hash_password(password), is_verified=True)
     db_session.add(user)
@@ -17,7 +19,9 @@ async def _create_verified_user(db_session, email="user@example.com", password="
     return user
 
 
-async def _create_unverified_user(db_session, email="unverified@example.com", password="password123"):
+async def _create_unverified_user(
+    db_session, email="unverified@example.com", password="password123"
+):
     user = User(email=email, hashed_password=hash_password(password), is_verified=False)
     db_session.add(user)
     await db_session.commit()
@@ -27,14 +31,18 @@ async def _create_unverified_user(db_session, email="unverified@example.com", pa
 
 # ── register ──────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_register_success(client: AsyncClient):
     with patch("app.api.v1.auth.send_verification_email") as mock_task:
         mock_task.delay = lambda *a, **kw: None
-        resp = await client.post("/api/v1/auth/register", json={
-            "email": "new@example.com",
-            "password": "securepassword",
-        })
+        resp = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "new@example.com",
+                "password": "securepassword",
+            },
+        )
     assert resp.status_code == 201
     assert "подтвержден" in resp.json()["detail"]
 
@@ -44,40 +52,53 @@ async def test_register_duplicate_email(client: AsyncClient, db_session):
     await _create_verified_user(db_session, "dup@example.com")
     with patch("app.api.v1.auth.send_verification_email") as mock_task:
         mock_task.delay = lambda *a, **kw: None
-        resp = await client.post("/api/v1/auth/register", json={
-            "email": "dup@example.com",
-            "password": "securepassword",
-        })
+        resp = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "dup@example.com",
+                "password": "securepassword",
+            },
+        )
     assert resp.status_code == 409
 
 
 @pytest.mark.asyncio
 async def test_register_short_password(client: AsyncClient):
-    resp = await client.post("/api/v1/auth/register", json={
-        "email": "short@example.com",
-        "password": "abc",
-    })
+    resp = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "short@example.com",
+            "password": "abc",
+        },
+    )
     assert resp.status_code == 422
 
 
 @pytest.mark.asyncio
 async def test_register_invalid_email(client: AsyncClient):
-    resp = await client.post("/api/v1/auth/register", json={
-        "email": "not-an-email",
-        "password": "password123",
-    })
+    resp = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "not-an-email",
+            "password": "password123",
+        },
+    )
     assert resp.status_code == 422
 
 
 # ── login ─────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_login_success(client: AsyncClient, db_session):
     await _create_verified_user(db_session)
-    resp = await client.post("/api/v1/auth/login", json={
-        "email": "user@example.com",
-        "password": "password123",
-    })
+    resp = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "user@example.com",
+            "password": "password123",
+        },
+    )
     assert resp.status_code == 200
     body = resp.json()
     assert body["email"] == "user@example.com"
@@ -88,34 +109,44 @@ async def test_login_success(client: AsyncClient, db_session):
 @pytest.mark.asyncio
 async def test_login_wrong_password(client: AsyncClient, db_session):
     await _create_verified_user(db_session)
-    resp = await client.post("/api/v1/auth/login", json={
-        "email": "user@example.com",
-        "password": "wrong",
-    })
+    resp = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "user@example.com",
+            "password": "wrong",
+        },
+    )
     assert resp.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_login_unverified_returns_403(client: AsyncClient, db_session):
     await _create_unverified_user(db_session)
-    resp = await client.post("/api/v1/auth/login", json={
-        "email": "unverified@example.com",
-        "password": "password123",
-    })
+    resp = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "unverified@example.com",
+            "password": "password123",
+        },
+    )
     assert resp.status_code == 403
     assert "не подтверждён" in resp.json()["detail"]
 
 
 @pytest.mark.asyncio
 async def test_login_unknown_email(client: AsyncClient):
-    resp = await client.post("/api/v1/auth/login", json={
-        "email": "ghost@example.com",
-        "password": "password123",
-    })
+    resp = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "ghost@example.com",
+            "password": "password123",
+        },
+    )
     assert resp.status_code == 401
 
 
 # ── verify-email ──────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_verify_email_success(client: AsyncClient, db_session):
@@ -142,13 +173,17 @@ async def test_verify_email_already_verified(client: AsyncClient, db_session):
 
 # ── me & logout ───────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_me_authenticated(client: AsyncClient, db_session):
     await _create_verified_user(db_session)
-    login_resp = await client.post("/api/v1/auth/login", json={
-        "email": "user@example.com",
-        "password": "password123",
-    })
+    login_resp = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "user@example.com",
+            "password": "password123",
+        },
+    )
     assert login_resp.status_code == 200
 
     me_resp = await client.get("/api/v1/auth/me")
@@ -165,10 +200,13 @@ async def test_me_unauthenticated(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_logout_clears_cookie(client: AsyncClient, db_session):
     await _create_verified_user(db_session)
-    await client.post("/api/v1/auth/login", json={
-        "email": "user@example.com",
-        "password": "password123",
-    })
+    await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "user@example.com",
+            "password": "password123",
+        },
+    )
     resp = await client.post("/api/v1/auth/logout")
     assert resp.status_code == 200
     me_resp = await client.get("/api/v1/auth/me")

@@ -1213,6 +1213,7 @@ dev = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "aiosqlite" },
     { name = "factory-boy" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -1252,6 +1253,7 @@ provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "aiosqlite", specifier = ">=0.22.1" },
     { name = "factory-boy", specifier = ">=3.3.0" },
     { name = "pytest", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", specifier = ">=0.25.0" },

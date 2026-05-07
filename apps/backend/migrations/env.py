@@ -7,6 +7,8 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.config import settings
+from app.db.base import Base
+from app.models.user import User  # noqa: F401 — регистрирует таблицу users в metadata
 
 # Alembic Config — даёт доступ к alembic.ini
 config = context.config
@@ -18,9 +20,6 @@ if config.config_file_name is not None:
 # URL из pydantic-settings, не из alembic.ini
 # ref: spec.md → PostgreSQL, asyncpg
 config.set_main_option("sqlalchemy.url", settings.database_url)
-
-from app.db.base import Base
-from app.models.user import User  # noqa: F401 — регистрирует таблицу users в metadata
 
 target_metadata = Base.metadata
 

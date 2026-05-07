@@ -122,11 +122,11 @@ lint-fix: ## Автоисправление (ESLint + Ruff)
 	cd $(BACKEND_DIR) && uv run ruff check --fix . && uv run ruff format .
 
 test: ## Vitest + Pytest
-	cd $(FRONTEND_DIR) && pnpm run test
+	eval "$$(fnm env)" && cd $(FRONTEND_DIR) && pnpm run test
 	cd $(BACKEND_DIR) && uv run pytest tests/ -v
 
 test-watch: ## Vitest в watch-режиме
-	cd $(FRONTEND_DIR) && pnpm run test:watch
+	eval "$$(fnm env)" && cd $(FRONTEND_DIR) && pnpm run test:watch
 
 # ─── Инсталляция зависимостей ────────────────────────────────────────────────
 install: ## Установить JS-зависимости (pnpm)
