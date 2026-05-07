@@ -113,20 +113,20 @@ build-front: ## Собрать Nuxt для production
 	cd $(FRONTEND_DIR) && pnpm build
 
 # ─── Линтинг и тесты ─────────────────────────────────────────────────────────
-lint: ## Запустить все линтеры (Biome + Ruff)
-	cd $(FRONTEND_DIR) && pnpm biome check .
+lint: ## Запустить все линтеры (ESLint + Ruff)
+	cd $(FRONTEND_DIR) && pnpm run lint
 	cd $(BACKEND_DIR) && uv run ruff check . && uv run ruff format --check .
 
-lint-fix: ## Автоисправление (Biome + Ruff)
-	cd $(FRONTEND_DIR) && pnpm biome check --write .
+lint-fix: ## Автоисправление (ESLint + Ruff)
+	cd $(FRONTEND_DIR) && pnpm run lint:fix
 	cd $(BACKEND_DIR) && uv run ruff check --fix . && uv run ruff format .
 
 test: ## Vitest + Pytest
-	cd $(FRONTEND_DIR) && pnpm vitest run
+	cd $(FRONTEND_DIR) && pnpm run test
 	cd $(BACKEND_DIR) && uv run pytest tests/ -v
 
 test-watch: ## Vitest в watch-режиме
-	cd $(FRONTEND_DIR) && pnpm vitest
+	cd $(FRONTEND_DIR) && pnpm run test:watch
 
 # ─── Инсталляция зависимостей ────────────────────────────────────────────────
 install: ## Установить JS-зависимости (pnpm)
