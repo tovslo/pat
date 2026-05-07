@@ -1,4 +1,6 @@
-import httpx
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 from app.celery_app import celery_app
 from app.config import settings
@@ -8,10 +10,9 @@ from app.config import settings
     queue="emails",
     max_retries=3,
     default_retry_delay=60,
-    autoretry_for=(httpx.HTTPError,),
+    autoretry_for=(OSError, smtplib.SMTPException),
 )
 def send_verification_email(to_email: str, verification_url: str) -> None:
-    """Отправляет письмо подтверждения регистрации через Mailgun."""
     html_body = f"""
     <html><body>
     <h2>Подтвердите ваш email</h2>
@@ -27,16 +28,15 @@ def send_verification_email(to_email: str, verification_url: str) -> None:
     """
     text_body = f"Подтвердите ваш email MyApp: {verification_url}\nСсылка действительна 24 часа."
 
-    with httpx.Client(timeout=10) as client:
-        resp = client.post(
-            f"{settings.mailgun_api_base}/v3/{settings.mailgun_domain}/messages",
-            auth=("api", settings.mailgun_api_key),
-            data={
-                "from": f"MyApp <noreply@{settings.mailgun_domain}>",
-                "to": to_email,
-                "subject": "Подтвердите ваш email — MyApp",
-                "text": text_body,
-                "html": html_body,
-            },
-        )
-        resp.raise_for_status()
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Подтвердите ваш email — MyApp"
+    msg["From"] = settings.email_from
+    msg["To"] = to_email
+    msg.attach(MIMEText(text_body, "plain"))
+    msg.attach(MIMEText(html_body, "html"))
+
+    cls = smtplib.SMTP_SSL if settings.smtp_tls else smtplib.SMTP
+    with cls(settings.smtp_host, settings.smtp_port, timeout=10) as smtp:
+        if settings.smtp_user:
+            smtp.login(settings.smtp_user, settings.smtp_password)
+        smtp.sendmail(settings.email_from, to_email, msg.as_string())

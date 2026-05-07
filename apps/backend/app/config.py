@@ -38,10 +38,13 @@ class Settings(BaseSettings):
     s3_bucket_name: str = "myapp-dev"
     s3_addressing_style: str = "path"
 
-    # Mailgun — ref: spec.md → Mailgun
-    mailgun_domain: str = "myapp-dev.local"
-    mailgun_api_key: str = "dev-no-key"
-    mailgun_api_base: str = "http://localhost:8025"
+    # Email (SMTP) — dev: Mailpit :1025, prod: Mailgun/SendGrid/SES SMTP
+    smtp_host: str = "localhost"
+    smtp_port: int = 1025
+    smtp_tls: bool = False
+    smtp_user: str = ""
+    smtp_password: str = ""
+    email_from: str = "noreply@myapp-dev.local"
 
     # Auth — ref: spec.md → JWT, HTTP-only cookies
     jwt_secret: str = "dev-jwt-secret-change-in-production-minimum-64-chars-xxxxxxxxxxxxx"
