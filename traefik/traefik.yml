@@ -1,0 +1,103 @@
+# Traefik v3 — Static Configuration
+# ref: spec.md → Traefik v3 + Docker Swarm, mydomain.ru, WebSocket, Let's Encrypt
+
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+log:
+  level: INFO
+  format: json
+
+accessLog:
+  filePath: /var/log/traefik/access.log
+  format: json
+  bufferingSize: 100
+  fields:
+    defaultMode: keep
+    headers:
+      defaultMode: drop
+      names:
+        User-Agent: keep
+        Authorization: drop
+
+api:
+  dashboard: true
+  insecure: false
+
+# ─── Entry Points ──────────────────────────────────────────────────────────────
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+  # ref: spec.md → FastAPI WebSocket endpoint — wss:// support
+  # WebSocket (ws/wss) is handled natively by Traefik v3 via HTTP/1.1 Upgrade header.
+  # Plain ws:// on :80 is redirected to wss:// by the web→websecure redirect above.
+  # No separate entrypoint required; the same websecure (443) handles HTTP + WebSocket upgrade.
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: letsencrypt
+        domains:
+          - main: "mydomain.ru"
+            sans:
+              - "*.mydomain.ru"
+    # Explicit WebSocket transport settings for Traefik v3
+    transport:
+      respondingTimeouts:
+        readTimeout: "0s"    # no timeout — required for persistent WS connections
+        writeTimeout: "0s"   # no timeout — required for persistent WS connections
+        idleTimeout: "3600s"
+
+  metrics:
+    address: ":8082"   # internal only — scraped by Prometheus on overlay network
+
+# ─── Certificate Resolvers ─────────────────────────────────────────────────────
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "admin@mydomain.ru"
+      storage: /certs/acme.json
+      caServer: "https://acme-v02.api.letsencrypt.org/directory"
+      httpChallenge:
+        entryPoint: web
+
+# ─── Providers ─────────────────────────────────────────────────────────────────
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    swarmMode: true            # ref: spec.md → Docker Swarm
+    exposedByDefault: false
+    network: "myapp_frontend"  # overlay network — stack prefix "myapp_"
+    watch: true
+
+  file:
+    filename: /dynamic.yml
+    watch: true
+
+# ─── Metrics (Prometheus) ──────────────────────────────────────────────────────
+# ref: spec.md → Prometheus (Error Rate, Queue Depth, WS Active Connections)
+metrics:
+  prometheus:
+    buckets:
+      - 0.05
+      - 0.1
+      - 0.3
+      - 1.0
+      - 2.5
+      - 5.0
+    addEntryPointsLabels: true
+    addServicesLabels: true
+    addRoutersLabels: true
+    entryPoint: metrics
+
+# ─── Ping (healthcheck endpoint) ───────────────────────────────────────────────
+ping:
+  entryPoint: metrics

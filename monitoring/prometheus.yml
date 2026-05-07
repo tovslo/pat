@@ -1,0 +1,92 @@
+# Prometheus scrape configuration
+# ref: spec.md → Prometheus + Grafana → RED/USE Method
+# Metrics focus: Error Rate, Queue Depth, WS Active Connections,
+#                S3 Upload Latency, Mailgun Delivery Rate
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+  external_labels:
+    cluster: "myapp-swarm"
+    env: "production"
+    domain: "mydomain.ru"
+
+rule_files:
+  - /etc/prometheus/alerts/*.yml
+
+scrape_configs:
+
+  # ── Traefik v3 ──────────────────────────────────────────────────────────────
+  # ref: spec.md → Traefik metrics (WS Active Connections, Error Rate)
+  - job_name: traefik
+    static_configs:
+      - targets: ["traefik:8082"]
+    metrics_path: /metrics
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: traefik
+
+  # ── FastAPI (via prometheus-fastapi-instrumentator) ─────────────────────────
+  # ref: spec.md → FastAPI → OpenTelemetry
+  - job_name: fastapi
+    dns_sd_configs:
+      - names: ["tasks.fastapi"]   # Swarm DNS — resolves to all task IPs
+        type: A
+        port: 8000
+    metrics_path: /metrics
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: "(.*):\\d+"
+        target_label: instance
+        replacement: "$1"
+
+  # ── RabbitMQ Prometheus Plugin ──────────────────────────────────────────────
+  # ref: spec.md → rabbitmq-prometheus plugin → Queue Depth monitoring
+  - job_name: rabbitmq
+    static_configs:
+      - targets: ["rabbitmq:15692"]   # rabbitmq_prometheus plugin port
+    metrics_path: /metrics
+    metric_relabel_configs:
+      # Keep queue-level metrics relevant to spec.md queues
+      - source_labels: [queue]
+        regex: "^(emails|reports|files|celery|.*\\.dlx)$"
+        action: keep
+
+  # ── Celery Exporter ─────────────────────────────────────────────────────────
+  # ref: spec.md → celery-exporter → worker metrics, task success/failure rates
+  # Deploy celery-exporter as sidecar: ghcr.io/daniildevelopmentman/celery-exporter
+  - job_name: celery
+    static_configs:
+      - targets: ["celery-exporter:9808"]
+    metrics_path: /metrics
+
+  # ── PostgreSQL Exporter ─────────────────────────────────────────────────────
+  - job_name: postgres
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+    metrics_path: /metrics
+
+  # ── Nuxt SSR ────────────────────────────────────────────────────────────────
+  - job_name: nuxt
+    dns_sd_configs:
+      - names: ["tasks.nuxt"]
+        type: A
+        port: 3000
+    metrics_path: /api/_metrics   # nuxt-prometheus module endpoint
+
+  # ── Node Exporter (VPS system metrics) ─────────────────────────────────────
+  # ref: spec.md → USE Method (Utilization, Saturation, Errors)
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: "node_(cpu|memory|disk|network|filesystem).*"
+        action: keep
+
+  # ── Prometheus self-monitoring ───────────────────────────────────────────────
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

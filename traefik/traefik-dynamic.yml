@@ -1,0 +1,157 @@
+# Traefik v3 — Dynamic Configuration (file provider)
+# ref: spec.md → Traefik v3 → middleware for auth & rate-limiting, WebSocket TLS
+
+http:
+
+  # ─── Middlewares ─────────────────────────────────────────────────────────────
+
+  middlewares:
+
+    # ref: spec.md → rate-limiting
+    rate-limit:
+      rateLimit:
+        average: 100
+        period: "1s"
+        burst: 50
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # API-specific rate limit (more restrictive)
+    api-rate-limit:
+      rateLimit:
+        average: 60
+        period: "1s"
+        burst: 20
+        sourceCriterion:
+          requestHeaderName: "X-Forwarded-For"
+
+    # ref: spec.md → CORS, HTTP-only cookies, SameSite=Lax/Strict, Domain=mydomain.ru
+    secure-headers:
+      headers:
+        # HSTS
+        forceSTSHeader: true
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        # Clickjacking
+        frameDeny: true
+        # MIME sniffing
+        contentTypeNosniff: true
+        # XSS
+        browserXssFilter: true
+        # Referrer
+        referrerPolicy: "strict-origin-when-cross-origin"
+        # CSP — allows wss:// for WebSocket connections
+        contentSecurityPolicy: >-
+          default-src 'self';
+          script-src 'self' 'unsafe-inline';
+          style-src 'self' 'unsafe-inline';
+          img-src 'self' data: blob: https:;
+          font-src 'self';
+          connect-src 'self' wss://mydomain.ru https://mydomain.ru;
+          frame-ancestors 'none';
+        # Cookie settings — ref: spec.md → HTTP-only cookies Secure, SameSite=Lax/Strict
+        customResponseHeaders:
+          X-Powered-By: ""
+          Server: ""
+          Strict-Transport-Security: "max-age=31536000; includeSubDomains; preload"
+
+    # ref: spec.md → FastAPI WebSocket endpoint — explicit ws/wss headers
+    ws-upgrade:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+          Connection: "Upgrade"
+          Upgrade: "websocket"
+        # Keep WebSocket upgrade headers through the proxy
+        allowedHosts:
+          - "mydomain.ru"
+
+    # CORS middleware — ref: spec.md → CORS/Cookie hardening (Phase 4)
+    cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Requested-With
+          - X-CSRF-Token
+        accessControlAllowOriginList:
+          - "https://mydomain.ru"
+        accessControlMaxAge: 7200
+        accessControlAllowCredentials: true
+        addVaryHeader: true
+
+    # Basic auth for internal dashboards (Traefik, Prometheus)
+    # Credentials stored in Docker secret traefik_users (htpasswd format)
+    basic-auth:
+      basicAuth:
+        usersFile: /run/secrets/traefik_users
+        realm: "mydomain.ru admin"
+        removeHeader: true
+
+    # Forward auth to FastAPI for protected routes
+    # ref: spec.md → @nuxt/auth-utils, RBAC, Token Rotation
+    api-auth:
+      forwardAuth:
+        address: "http://fastapi:8000/api/v1/auth/verify"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "X-User-Id"
+          - "X-User-Role"
+          - "X-User-Email"
+        tls:
+          insecureSkipVerify: false
+
+    # Strip /api prefix before forwarding to FastAPI
+    strip-api-prefix:
+      stripPrefix:
+        prefixes:
+          - "/api"
+        forceSlash: true
+
+    # Redirect www → apex
+    www-redirect:
+      redirectRegex:
+        regex: "^https://www\\.mydomain\\.ru/(.*)"
+        replacement: "https://mydomain.ru/${1}"
+        permanent: true
+
+    # Compress responses
+    compress:
+      compress:
+        excludedContentTypes:
+          - text/event-stream    # SSE must not be compressed
+          - application/octet-stream
+        minimumSize: 1024
+
+# ─── TLS ─────────────────────────────────────────────────────────────────────
+# ref: spec.md → WebSocket TLS (wss://), SSL Let's Encrypt
+tls:
+  options:
+    default:
+      minVersion: "VersionTLS12"
+      maxVersion: "VersionTLS13"
+      cipherSuites:
+        - "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+      curvePreferences:
+        - "CurveP256"
+        - "CurveP384"
+      sniStrict: true
+
+    # Relaxed TLS for internal health checkers (non-SNI clients)
+    internal:
+      minVersion: "VersionTLS12"
+      sniStrict: false

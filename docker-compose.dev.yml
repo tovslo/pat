@@ -1,0 +1,98 @@
+# Dev-окружение: только инфраструктура в Docker.
+# Nuxt, FastAPI, Celery workers — запускаются локально (pnpm dev / uvicorn / celery).
+# ref: spec.md → Фаза 1 (Foundation) → Docker Compose (local dev)
+
+services:
+
+  # ─── PostgreSQL ──────────────────────────────────────────────────────────────
+  # ref: spec.md → PostgreSQL, asyncpg, Connection Pooling
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: myapp_dev
+      POSTGRES_USER: myapp
+      POSTGRES_PASSWORD: devpassword
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myapp -d myapp_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ─── RabbitMQ ────────────────────────────────────────────────────────────────
+  # ref: spec.md → RabbitMQ broker + rpc:// result backend
+  # Management UI: http://localhost:15672  (myapp / devpassword)
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"   # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: myapp
+      RABBITMQ_DEFAULT_PASS: devpassword
+    volumes:
+      - rabbitmq_dev:/var/lib/rabbitmq
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 8s
+      timeout: 5s
+      retries: 10
+
+  # ─── MinIO (S3-compatible) ──────────────────────────────────────────────────
+  # ref: spec.md → MinIO for Dev (S3-Compatible Storage)
+  # S3 API:  http://localhost:9000
+  # Console: http://localhost:9001  (minioadmin / minioadmin)
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_dev:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/minio/health/live"]
+      interval: 8s
+      timeout: 3s
+      retries: 10
+
+  # Создаёт бакет myapp-dev при первом запуске, затем завершается.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 minioadmin minioadmin &&
+        mc mb --ignore-existing local/myapp-dev &&
+        mc mb --ignore-existing local/myapp-dev/tmp &&
+        mc mb --ignore-existing local/myapp-dev/reports &&
+        mc anonymous set download local/myapp-dev/public &&
+        echo 'MinIO bucket myapp-dev ready.'
+      "
+    restart: "no"
+
+  # ─── Mailpit (SMTP + Mailgun-compatible API mock) ───────────────────────────
+  # ref: spec.md → Mailgun → для dev заменяем Mailpit (совместим с Mailgun v3 API)
+  # SMTP:     localhost:1025  (без аутентификации)
+  # Web UI:   http://localhost:8025
+  # Mailgun API mock: http://localhost:8025/api/v3/{domain}/messages
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI + Mailgun-compatible HTTP API
+
+volumes:
+  postgres_dev:
+  rabbitmq_dev:
+  minio_dev:

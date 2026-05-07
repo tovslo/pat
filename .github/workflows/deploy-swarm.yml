@@ -1,0 +1,359 @@
+name: "Build → Test → Deploy to Swarm"
+
+# ref: spec.md → GitHub Actions → Docker Swarm Deploy, Trunk-Based Development
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+
+# ─── Lint ────────────────────────────────────────────────────────────────────────
+jobs:
+  lint:
+    name: "Lint & Type Check"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ref: spec.md → pnpm + Turborepo
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ref: spec.md → Biome (replaces ESLint/Prettier)
+      - name: Biome lint + format check
+        run: pnpm turbo run lint typecheck --filter=./apps/frontend
+
+      # ref: spec.md → Ruff (Python ultra-fast linter)
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: pip install uv
+
+      # ref: spec.md → uv workspace
+      - name: uv sync
+        run: uv sync --all-packages
+        working-directory: apps/backend
+
+      - name: Ruff lint
+        run: uv run ruff check apps/backend --output-format=github
+
+      - name: Ruff format check
+        run: uv run ruff format --check apps/backend
+
+# ─── Tests ───────────────────────────────────────────────────────────────────────
+  test:
+    name: "Unit & Integration Tests"
+    runs-on: ubuntu-latest
+    needs: lint
+
+    services:
+      # ref: spec.md → PostgreSQL
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      # ref: spec.md → RabbitMQ (broker + rpc:// result backend)
+      rabbitmq:
+        image: rabbitmq:3.13-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: testuser
+          RABBITMQ_DEFAULT_PASS: testpass
+        options: >-
+          --health-cmd "rabbitmq-diagnostics ping"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 5
+        ports:
+          - 5672:5672
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # ref: spec.md → Vitest (unit + component tests)
+      - name: Vitest
+        run: pnpm turbo run test --filter=./apps/frontend
+        env:
+          NUXT_PUBLIC_API_BASE: "http://localhost:8000/api"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install uv
+
+      - name: uv sync (with dev deps)
+        run: uv sync --all-packages
+        working-directory: apps/backend
+
+      # ref: spec.md → Pytest
+      - name: Pytest
+        run: uv run pytest apps/backend/tests/ -v --tb=short
+        env:
+          DATABASE_URL: "postgresql+asyncpg://testuser:testpass@localhost:5432/testdb"
+          RABBITMQ_URL: "amqp://testuser:testpass@localhost:5672//"
+          CELERY_TASK_ALWAYS_EAGER: "true"   # inline task execution in tests
+          S3_ENDPOINT_URL: ""
+          MAILGUN_API_KEY: "test-key"
+          MAILGUN_DOMAIN: "test.example.com"
+          JWT_SECRET: "test-secret-not-for-prod"
+
+# ─── Build & Push ────────────────────────────────────────────────────────────────
+  build:
+    name: "Build & Push Docker Images"
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_tag: ${{ steps.tag.outputs.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ref: spec.md → Multi-arch Builds
+      - name: Set up QEMU (multi-arch)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set short SHA tag
+        id: tag
+        run: echo "sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      # ── Nuxt image ──────────────────────────────────────────────────────────────
+      - name: Docker metadata — nuxt
+        id: meta-nuxt
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}/nuxt
+          tags: |
+            type=raw,value=${{ steps.tag.outputs.sha }}
+            type=raw,value=latest
+
+      # ref: spec.md → Immutable Infrastructure (image tagged with git SHA)
+      - name: Build & push Nuxt image
+        uses: docker/build-push-action@v5
+        with:
+          context: apps/frontend
+          file: apps/frontend/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta-nuxt.outputs.tags }}
+          labels: ${{ steps.meta-nuxt.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NUXT_PUBLIC_API_BASE=https://mydomain.ru/api
+            NUXT_PUBLIC_WS_BASE=wss://mydomain.ru/ws
+
+      # ── FastAPI image ────────────────────────────────────────────────────────────
+      - name: Docker metadata — fastapi
+        id: meta-fastapi
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}/fastapi
+          tags: |
+            type=raw,value=${{ steps.tag.outputs.sha }}
+            type=raw,value=latest
+
+      - name: Build & push FastAPI image
+        uses: docker/build-push-action@v5
+        with:
+          context: apps/backend
+          file: apps/backend/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta-fastapi.outputs.tags }}
+          labels: ${{ steps.meta-fastapi.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+# ─── Deploy ───────────────────────────────────────────────────────────────────────
+  deploy:
+    name: "Deploy to Docker Swarm"
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync stack files to VPS
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/id_ed25519" \
+            docker-stack.yml \
+            traefik/ \
+            monitoring/ \
+            rabbitmq/ \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/myapp/"
+
+      # ref: spec.md → Rolling Updates (parallelism:1, delay:10s)
+      - name: Deploy stack (rolling update)
+        env:
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+          GITHUB_REPO: ${{ github.repository }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            bash -s << 'ENDSSH'
+
+            set -euo pipefail
+            cd /opt/myapp
+
+            # Authenticate to GHCR on the node
+            echo "${{ secrets.GHCR_TOKEN }}" | \
+              docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+            # Pull new images before deploying (fail fast if image missing)
+            docker pull ghcr.io/${GITHUB_REPO}/nuxt:${IMAGE_TAG}
+            docker pull ghcr.io/${GITHUB_REPO}/fastapi:${IMAGE_TAG}
+
+            # Rolling stack deploy — Swarm handles parallelism:1, delay:10s
+            # per deploy_config in docker-stack.yml
+            IMAGE_TAG="${IMAGE_TAG}" \
+            GITHUB_REPO="${GITHUB_REPO}" \
+            docker stack deploy \
+              --with-registry-auth \
+              --resolve-image always \
+              --prune \
+              -c /opt/myapp/docker-stack.yml \
+              myapp
+
+            echo "Stack deployed. Waiting for services to converge..."
+            sleep 30
+            docker stack services myapp
+
+          ENDSSH
+
+      # ref: spec.md → Zero-Downtime Migrations (Alembic, Idempotent Rollback)
+      - name: Run Alembic migrations
+        env:
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            bash -s << ENDSSH
+
+            set -euo pipefail
+            docker run --rm \
+              --network myapp_database \
+              --secret postgres_password \
+              -e POSTGRES_HOST=postgres \
+              -e POSTGRES_DB=\${POSTGRES_DB} \
+              -e POSTGRES_USER=\${POSTGRES_USER} \
+              ghcr.io/${{ github.repository }}/fastapi:${IMAGE_TAG} \
+              uv run alembic upgrade head
+
+          ENDSSH
+
+      - name: Post-deploy health checks
+        run: |
+          echo "Waiting 60s for services to stabilize..."
+          sleep 60
+          curl -fsSL --max-time 15 https://mydomain.ru/api/_health | \
+            python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('status')=='ok' else 1)"
+          echo "Health check passed."
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Deployment failed for ${{ github.sha }}. Check logs above."
+          # Hook: add Slack/Telegram notification here via webhook secret
+
+# ─── E2E Tests (post-deploy) ─────────────────────────────────────────────────────
+  e2e:
+    name: "E2E Tests (Playwright)"
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # ref: spec.md → Playwright (cross-browser, Page Object Model)
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run E2E tests against production
+        run: pnpm turbo run e2e --filter=./apps/frontend
+        env:
+          PLAYWRIGHT_BASE_URL: "https://mydomain.ru"
+          CI: "true"
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-${{ github.sha }}
+          path: apps/frontend/playwright-report/
+          retention-days: 7

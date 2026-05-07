@@ -1,0 +1,488 @@
+version: "3.9"
+
+# ref: spec.md → CI/CD & Infrastructure (Docker Swarm Optimized)
+# Stack name: myapp  →  networks become myapp_frontend, myapp_backend, etc.
+
+x-deploy-defaults: &deploy-defaults
+  update_config:
+    parallelism: 1        # ref: spec.md → Rolling Updates parallelism:1
+    delay: 10s            # ref: spec.md → Rolling Updates delay:10s
+    failure_action: rollback
+    order: start-first
+  restart_policy:
+    condition: on-failure
+    delay: 5s
+    max_attempts: 3
+
+x-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "50m"
+    max-file: "5"
+
+services:
+
+  # ─── Reverse Proxy ──────────────────────────────────────────────────────────
+  traefik:
+    image: traefik:v3.2
+    ports:
+      - target: 80
+        published: 80
+        mode: host
+      - target: 443
+        published: 443
+        mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_certs:/certs
+      - ./traefik/traefik.yml:/traefik.yml:ro
+      - ./traefik/traefik-dynamic.yml:/dynamic.yml:ro
+    networks:
+      - frontend
+    secrets:
+      - traefik_users
+    logging: *logging
+    deploy:
+      <<: *deploy-defaults
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+        reservations:
+          memory: 64M
+          cpus: "0.1"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.mydomain.ru`)"
+        - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+        - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.traefik-dashboard.service=api@internal"
+        - "traefik.http.routers.traefik-dashboard.middlewares=basic-auth@file"
+        - "traefik.http.services.traefik-noop.loadbalancer.server.port=8080"
+
+  # ─── Frontend (Nuxt 3 SSR) ──────────────────────────────────────────────────
+  nuxt:
+    image: ghcr.io/${GITHUB_REPO}/nuxt:${IMAGE_TAG:-latest}
+    networks:
+      - frontend
+      - backend
+    environment:
+      NODE_ENV: production
+      NUXT_PUBLIC_API_BASE: "https://mydomain.ru/api"
+      NUXT_PUBLIC_WS_BASE: "wss://mydomain.ru/ws"     # ref: spec.md → WebSockets
+      NUXT_SESSION_DOMAIN: "mydomain.ru"               # ref: spec.md → HTTP-only cookies Domain
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/_health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      <<: *deploy-defaults
+      replicas: 2
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+          cpus: "0.25"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.nuxt.rule=Host(`mydomain.ru`)"
+        - "traefik.http.routers.nuxt.entrypoints=websecure"
+        - "traefik.http.routers.nuxt.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.nuxt.middlewares=secure-headers@file,rate-limit@file"
+        - "traefik.http.routers.nuxt.priority=10"
+        - "traefik.http.services.nuxt.loadbalancer.server.port=3000"
+        - "traefik.http.services.nuxt.loadbalancer.sticky.cookie=true"
+        - "traefik.http.services.nuxt.loadbalancer.sticky.cookie.name=nuxt_sticky"
+        - "traefik.http.services.nuxt.loadbalancer.sticky.cookie.secure=true"
+        - "traefik.http.services.nuxt.loadbalancer.sticky.cookie.httponly=true"
+
+  # ─── Backend (FastAPI + WebSocket) ──────────────────────────────────────────
+  fastapi:
+    image: ghcr.io/${GITHUB_REPO}/fastapi:${IMAGE_TAG:-latest}
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4 --proxy-headers
+    networks:
+      - frontend
+      - backend
+      - database
+    secrets:
+      - postgres_password
+      - rabbitmq_password
+      - mailgun_api_key
+      - s3_access_key
+      - s3_secret_key
+      - jwt_secret
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      # Yandex Cloud Object Storage — ref: spec.md → S3-Compatible Storage
+      S3_ENDPOINT_URL: "https://storage.yandexcloud.net"
+      S3_REGION: "ru-central1"
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
+      S3_ADDRESSING_STYLE: "path"   # Yandex Cloud требует path-style (не virtual-hosted)
+      MAILGUN_DOMAIN: ${MAILGUN_DOMAIN}
+      ALLOWED_ORIGINS: "https://mydomain.ru"           # ref: spec.md → CORS
+      CORS_ORIGIN: "https://mydomain.ru"
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      <<: *deploy-defaults
+      replicas: 2
+      resources:
+        limits:
+          memory: 1G
+          cpus: "2.0"
+        reservations:
+          memory: 256M
+          cpus: "0.5"
+      labels:
+        - "traefik.enable=true"
+
+        # API router: /api/* — HTTP
+        - "traefik.http.routers.fastapi.rule=Host(`mydomain.ru`) && PathPrefix(`/api`)"
+        - "traefik.http.routers.fastapi.entrypoints=websecure"
+        - "traefik.http.routers.fastapi.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.fastapi.middlewares=secure-headers@file,rate-limit@file"
+        - "traefik.http.routers.fastapi.priority=20"
+        - "traefik.http.services.fastapi.loadbalancer.server.port=8000"
+
+        # WebSocket router: /ws/* — ws/wss — ref: spec.md → FastAPI WebSockets
+        - "traefik.http.routers.fastapi-ws.rule=Host(`mydomain.ru`) && PathPrefix(`/ws`)"
+        - "traefik.http.routers.fastapi-ws.entrypoints=websecure"
+        - "traefik.http.routers.fastapi-ws.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.fastapi-ws.middlewares=ws-upgrade@file"
+        - "traefik.http.routers.fastapi-ws.priority=30"
+        - "traefik.http.services.fastapi-ws.loadbalancer.server.port=8000"
+        # Sticky sessions for WebSocket to route to the same backend replica
+        - "traefik.http.services.fastapi-ws.loadbalancer.sticky.cookie=true"
+        - "traefik.http.services.fastapi-ws.loadbalancer.sticky.cookie.name=ws_sticky"
+        - "traefik.http.services.fastapi-ws.loadbalancer.sticky.cookie.secure=true"
+        - "traefik.http.services.fastapi-ws.loadbalancer.sticky.cookie.httponly=true"
+
+  # ─── Celery Workers ──────────────────────────────────────────────────────────
+
+  # ref: spec.md → emails: High-priority queue, Mailgun HTTP API, rate-limit 10/s
+  celery-emails:
+    image: ghcr.io/${GITHUB_REPO}/fastapi:${IMAGE_TAG:-latest}
+    command: celery -A app.celery_app worker -Q emails -c 4 --loglevel=info -n emails@%h
+    networks:
+      - backend
+    secrets:
+      - rabbitmq_password
+      - mailgun_api_key
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      MAILGUN_DOMAIN: ${MAILGUN_DOMAIN}
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.celery_app", "inspect", "ping", "-d", "emails@$HOSTNAME"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      <<: *deploy-defaults
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+          cpus: "0.25"
+
+  # ref: spec.md → reports: Default queue, task_time_limit=300, WS progress broadcast
+  celery-reports:
+    image: ghcr.io/${GITHUB_REPO}/fastapi:${IMAGE_TAG:-latest}
+    command: celery -A app.celery_app worker -Q reports -c 2 --loglevel=info -n reports@%h
+    networks:
+      - backend
+      - database
+    secrets:
+      - rabbitmq_password
+      - postgres_password
+      - s3_access_key
+      - s3_secret_key
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      S3_ENDPOINT_URL: "https://storage.yandexcloud.net"
+      S3_REGION: "ru-central1"
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
+      S3_ADDRESSING_STYLE: "path"
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.celery_app", "inspect", "ping", "-d", "reports@$HOSTNAME"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      <<: *deploy-defaults
+      replicas: 1
+      resources:
+        limits:
+          memory: 1G
+          cpus: "2.0"
+        reservations:
+          memory: 256M
+          cpus: "0.5"
+
+  # ref: spec.md → files: Low-priority queue, chunked processing, auto-cleanup
+  celery-files:
+    image: ghcr.io/${GITHUB_REPO}/fastapi:${IMAGE_TAG:-latest}
+    command: celery -A app.celery_app worker -Q files -c 2 --loglevel=info -n files@%h
+    networks:
+      - backend
+    secrets:
+      - rabbitmq_password
+      - s3_access_key
+      - s3_secret_key
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      S3_ENDPOINT_URL: "https://storage.yandexcloud.net"
+      S3_REGION: "ru-central1"
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
+      S3_ADDRESSING_STYLE: "path"
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.celery_app", "inspect", "ping", "-d", "files@$HOSTNAME"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      <<: *deploy-defaults
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+          cpus: "0.25"
+
+  # ─── Database ────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    networks:
+      - database
+    secrets:
+      - postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    logging: *logging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    deploy:
+      <<: *deploy-defaults
+      replicas: 1
+      placement:
+        constraints:
+          # MVP (single-node): manager узел хранит все stateful-данные.
+          # Multi-node migration: добавить метку командой:
+          #   docker node update --label-add role=db <node-id>
+          # Затем заменить на: node.labels.role == db
+          - node.role == manager
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+
+  # ─── Message Broker ──────────────────────────────────────────────────────────
+  # ref: spec.md → RabbitMQ + Celery (rpc:// result backend)
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    networks:
+      - backend
+      - monitoring
+    secrets:
+      - rabbitmq_password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS_FILE: /run/secrets/rabbitmq_password
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      <<: *deploy-defaults
+      replicas: 1
+      placement:
+        constraints:
+          # MVP: manager. Multi-node: node.labels.role == broker
+          - node.role == manager
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+
+  # ─── Observability ───────────────────────────────────────────────────────────
+  # ref: spec.md → Prometheus + Grafana
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    networks:
+      - monitoring
+    volumes:
+      - prometheus_data:/prometheus
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts:/etc/prometheus/alerts:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      <<: *deploy-defaults
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.prometheus.rule=Host(`prometheus.mydomain.ru`)"
+        - "traefik.http.routers.prometheus.entrypoints=websecure"
+        - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.prometheus.middlewares=basic-auth@file"
+        - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    networks:
+      - monitoring
+      - frontend
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      GF_SERVER_DOMAIN: grafana.mydomain.ru
+      GF_SERVER_ROOT_URL: "https://grafana.mydomain.ru"
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_COOKIE_SAMESITE: lax
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      <<: *deploy-defaults
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 128M
+          cpus: "0.1"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.grafana.rule=Host(`grafana.mydomain.ru`)"
+        - "traefik.http.routers.grafana.entrypoints=websecure"
+        - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+        - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+networks:
+  # ref: spec.md → Overlay Network Isolation
+  frontend:
+    driver: overlay
+    attachable: true
+  backend:
+    driver: overlay
+    attachable: true
+  database:
+    driver: overlay
+    attachable: false          # DB network locked down — not directly attachable
+  monitoring:
+    driver: overlay
+    attachable: false
+
+volumes:
+  postgres_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  traefik_certs:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+secrets:
+  # ref: spec.md → Docker Secrets for all sensitive data
+  postgres_password:
+    external: true
+  rabbitmq_password:
+    external: true
+  mailgun_api_key:
+    external: true
+  s3_access_key:
+    external: true
+  s3_secret_key:
+    external: true
+  jwt_secret:
+    external: true
+  traefik_users:
+    external: true

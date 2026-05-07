@@ -1,0 +1,60 @@
+# Нормализовать все текстовые файлы до LF в репозитории.
+# На Windows git конвертирует CRLF → LF при коммите (если core.autocrlf=true/input).
+* text=auto eol=lf
+
+# ── Скрипты (всегда LF — запускаются на Linux/VPS) ───────────────────────────
+*.sh        text eol=lf
+*.bash      text eol=lf
+Makefile    text eol=lf
+
+# ── Windows-скрипты (всегда CRLF) ────────────────────────────────────────────
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+
+# ── Веб / конфиги (LF) ───────────────────────────────────────────────────────
+*.js        text eol=lf
+*.mjs       text eol=lf
+*.cjs       text eol=lf
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.vue       text eol=lf
+*.json      text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.toml      text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+*.env       text eol=lf
+*.env.*     text eol=lf
+*.css       text eol=lf
+*.html      text eol=lf
+*.svg       text eol=lf
+*.gitignore text eol=lf
+
+# ── Python (LF) ───────────────────────────────────────────────────────────────
+*.py        text eol=lf
+*.pyi       text eol=lf
+*.cfg       text eol=lf
+*.ini       text eol=lf
+
+# ── Бинарные файлы (не трогать) ──────────────────────────────────────────────
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.webp      binary
+*.pdf       binary
+*.zip       binary
+*.gz        binary
+*.tar       binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.eot       binary
+*.otf       binary
+*.mp4       binary
+*.mp3       binary
+*.db        binary
+*.sqlite    binary

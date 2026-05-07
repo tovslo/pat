@@ -1,0 +1,208 @@
+# RAG Index Configuration — local-rag-mcp
+# ref: spec.md → MCP Ecosystem → local-rag-mcp
+# Sources: .vue, .py, .yml, spec.md, OpenAPI schema
+
+version: "1.0"
+
+index:
+  path: "./.rag-index"
+  embedding:
+    model: "text-embedding-3-small"
+    dimensions: 1536
+    batch_size: 100
+    normalize: true
+
+# ─── Source Definitions ──────────────────────────────────────────────────────────
+sources:
+
+  # ref: spec.md → Frontend Core (Nuxt 3 + Vue 3, FSD architecture)
+  - id: vue-components
+    label: "Nuxt/Vue Components"
+    pattern: "apps/frontend/src/**/*.vue"
+    type: code
+    language: vue
+    priority: high
+    chunking:
+      strategy: semantic         # split on Vue SFC section boundaries
+      max_tokens: 512
+      overlap_tokens: 64
+      split_markers:
+        - "<template>"
+        - "<script"
+        - "<style"
+    metadata:
+      layer: frontend
+      framework: nuxt3
+      architecture: FSD
+
+  # ref: spec.md → Frontend Core (TypeScript)
+  - id: ts-composables
+    label: "TypeScript Composables & Stores"
+    pattern: "apps/frontend/src/**/*.ts"
+    type: code
+    language: typescript
+    priority: high
+    chunking:
+      strategy: ast
+      max_tokens: 400
+      overlap_tokens: 48
+      split_on:
+        - "export function "
+        - "export const "
+        - "export class "
+        - "defineStore"
+    exclude:
+      - "**/*.d.ts"
+      - "**/node_modules/**"
+    metadata:
+      layer: frontend
+      framework: nuxt3
+
+  # ref: spec.md → Backend & API (FastAPI, Celery tasks, Alembic)
+  - id: python-backend
+    label: "Python Backend (FastAPI + Celery)"
+    pattern: "apps/backend/**/*.py"
+    type: code
+    language: python
+    priority: high
+    chunking:
+      strategy: ast              # AST-aware: split on class/function boundaries
+      max_tokens: 400
+      overlap_tokens: 50
+      split_on:
+        - "^class "
+        - "^def "
+        - "^async def "
+        - "^@router"
+        - "^@app"
+        - "^@celery"
+    exclude:
+      - "**/migrations/versions/**"
+      - "**/__pycache__/**"
+      - "**/tests/**"
+    metadata:
+      layer: backend
+      framework: fastapi
+
+  # ref: spec.md → Database & Migrations (Alembic)
+  - id: python-migrations
+    label: "Alembic Migrations"
+    pattern: "apps/backend/migrations/versions/*.py"
+    type: code
+    language: python
+    priority: low
+    chunking:
+      strategy: document
+      max_tokens: 300
+      overlap_tokens: 20
+    metadata:
+      layer: database
+      framework: alembic
+
+  # ref: spec.md → CI/CD & Infrastructure (Docker Swarm, Traefik, GitHub Actions)
+  - id: infra-config
+    label: "Infrastructure YAML configs"
+    pattern: "**/*.yml"
+    type: config
+    language: yaml
+    priority: medium
+    chunking:
+      strategy: document
+      max_tokens: 350
+      overlap_tokens: 30
+    exclude:
+      - ".github/workflows/**"   # workflows indexed separately
+      - "**/node_modules/**"
+      - ".rag-index/**"
+      - "**/pnpm-lock.yaml"
+    metadata:
+      layer: infrastructure
+
+  # ref: spec.md → CI/CD (GitHub Actions)
+  - id: github-workflows
+    label: "GitHub Actions Workflows"
+    pattern: ".github/workflows/*.yml"
+    type: config
+    language: yaml
+    priority: medium
+    chunking:
+      strategy: heading
+      max_tokens: 300
+      overlap_tokens: 30
+      split_on:
+        - "^jobs:"
+        - "^  [a-z]"
+    metadata:
+      layer: cicd
+      framework: github-actions
+
+  # ref: spec.md → Single Source of Truth (spec.md)
+  - id: spec-doc
+    label: "Technical Specification (spec.md)"
+    pattern: "spec.md"
+    type: document
+    language: markdown
+    priority: critical            # highest priority — architecture decisions live here
+    chunking:
+      strategy: heading
+      max_tokens: 700
+      overlap_tokens: 100
+      split_on:
+        - "^## "
+        - "^### "
+    metadata:
+      layer: specification
+      authority: true             # treat as ground truth for architectural decisions
+
+  # ref: spec.md → openapi-typescript → Zod Schemas → Nuxt UI (Contract-First API)
+  - id: openapi-schema
+    label: "OpenAPI Schema"
+    pattern: "apps/backend/openapi.json"
+    type: api-schema
+    language: json
+    priority: critical
+    chunking:
+      strategy: json-path         # split on top-level paths and components
+      max_tokens: 256
+      overlap_tokens: 32
+      split_on_keys:
+        - "paths"
+        - "components.schemas"
+        - "components.responses"
+    metadata:
+      layer: api-contract
+      authority: true
+
+# ─── Retrieval Settings ──────────────────────────────────────────────────────────
+retrieval:
+  top_k: 8
+  min_score: 0.72
+  rerank: true
+  rerank_model: "rerank-english-v3.0"
+  context_window: 4096
+
+  # Priority boost by layer
+  boosts:
+    - field: "metadata.authority"
+      value: true
+      boost: 1.5
+    - field: "metadata.priority"
+      value: "critical"
+      boost: 1.3
+    - field: "metadata.layer"
+      value: "api-contract"
+      boost: 1.2
+
+# ─── Index Refresh ───────────────────────────────────────────────────────────────
+refresh:
+  strategy: watch               # file-system watcher — incremental re-index on change
+  debounce_ms: 1500
+  full_reindex_cron: "0 3 * * *"  # full rebuild at 3am daily
+  exclude_patterns:
+    - "**/.git/**"
+    - "**/node_modules/**"
+    - "**/__pycache__/**"
+    - "**/.venv/**"
+    - ".rag-index/**"
+    - "**/dist/**"
+    - "**/.nuxt/**"
