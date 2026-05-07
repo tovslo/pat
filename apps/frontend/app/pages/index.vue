@@ -112,8 +112,8 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
 
         <!-- Actions -->
         <div class="header-actions">
-          <button class="btn-ghost">Войти</button>
-          <button class="btn-primary">Начать бесплатно</button>
+          <NuxtLink to="/auth/login" class="btn-ghost">Войти</NuxtLink>
+          <NuxtLink to="/auth/register" class="btn-primary">Начать бесплатно</NuxtLink>
 
           <!-- Burger (mobile) -->
           <button
@@ -141,8 +141,8 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
             {{ link.label }}
           </a>
           <div class="flex gap-3 mt-4">
-            <button class="btn-ghost flex-1">Войти</button>
-            <button class="btn-primary flex-1">Начать</button>
+            <NuxtLink to="/auth/login" class="btn-ghost flex-1 text-center">Войти</NuxtLink>
+            <NuxtLink to="/auth/register" class="btn-primary flex-1 text-center">Начать</NuxtLink>
           </div>
         </nav>
       </Transition>
@@ -166,10 +166,10 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
         </p>
 
         <div class="hero-cta animate-fade-up" style="animation-delay: 0.4s">
-          <button class="btn-primary btn-lg">
+          <NuxtLink to="/auth/register" class="btn-primary btn-lg">
             Начать бесплатно
             <span class="ml-1.5">→</span>
-          </button>
+          </NuxtLink>
           <button class="btn-outline btn-lg">Смотреть демо</button>
         </div>
 
@@ -276,7 +276,7 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
             Полный контроль над данными, без vendor lock-in.
           </p>
           <div class="hero-cta">
-            <button class="btn-primary btn-lg">Получить доступ</button>
+            <NuxtLink to="/auth/register" class="btn-primary btn-lg">Получить доступ</NuxtLink>
             <button class="btn-outline btn-lg">Документация</button>
           </div>
         </div>

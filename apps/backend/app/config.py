@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60
 
+    # Frontend URL — используется для ссылок в письмах
+    frontend_url: str = "http://localhost:3000"
+
     # CORS — ref: spec.md → CORS/Cookie hardening
     allowed_origins: list[str] = ["http://localhost:3000"]
 

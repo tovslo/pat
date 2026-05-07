@@ -3,7 +3,6 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
     '@nuxt/ui',
-    '@pinia/nuxt',
   ],
 
   devtools: {
@@ -14,6 +13,12 @@ export default defineNuxtConfig({
 
   routeRules: {
     '/': { prerender: true },
+  },
+
+  vite: {
+    optimizeDeps: {
+      include: ['vee-validate', '@vee-validate/zod', 'zod', 'pinia', '@vue/devtools-api'],
+    },
   },
 
   compatibilityDate: '2025-01-15',

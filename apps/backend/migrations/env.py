@@ -19,14 +19,10 @@ if config.config_file_name is not None:
 # ref: spec.md → PostgreSQL, asyncpg
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
-# Импортируем Base со всеми моделями для автогенерации миграций.
-# Добавляйте импорты моделей по мере их создания:
-#   from app.models.user import User  # noqa: F401
-try:
-    from app.db.base import Base  # noqa: F401
-    target_metadata = Base.metadata
-except ImportError:
-    target_metadata = None
+from app.db.base import Base
+from app.models.user import User  # noqa: F401 — регистрирует таблицу users в metadata
+
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
