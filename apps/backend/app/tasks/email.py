@@ -5,7 +5,6 @@ from app.config import settings
 
 
 @celery_app.task(
-    name="tasks.email.send_verification_email",
     queue="emails",
     max_retries=3,
     default_retry_delay=60,
