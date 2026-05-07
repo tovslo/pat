@@ -16,3 +16,27 @@
   --color-green-900: #0A5331;
   --color-green-950: #052E16;
 }
+
+/* ── Background animations ── */
+@keyframes blob-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25%       { transform: translate(24px, -32px) scale(1.05); }
+  50%       { transform: translate(-18px, 18px) scale(0.96); }
+  75%       { transform: translate(28px, 12px) scale(1.02); }
+}
+
+@keyframes blob-drift-alt {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(-28px, 22px) scale(1.07); }
+  66%       { transform: translate(16px, -18px) scale(0.93); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 0.8; }
+}
