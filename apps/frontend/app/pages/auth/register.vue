@@ -76,7 +76,7 @@ async function onSubmit() {
         to="/"
         class="logo-mark mb-6 inline-flex"
       >
-        <span class="logo-icon">◈</span>
+        <img class="logo-icon" src="/logo-icon.svg" alt="" aria-hidden="true">
         <span class="logo-text">MyApp</span>
       </NuxtLink>
 
@@ -245,7 +245,7 @@ async function onSubmit() {
   border: 1px solid rgba(255,255,255,.09);
 }
 .logo-mark { display: inline-flex; align-items: center; gap: .5rem; text-decoration: none; font-weight: 700; font-size: 1.15rem; color: #fff; }
-.logo-icon  { color: #8b5cf6; font-size: 1.3rem; }
+.logo-icon  { width: 1.3rem; height: 1.3rem; vertical-align: middle; }
 .logo-text  { color: #fff; }
 .auth-title { font-size: 1.6rem; font-weight: 750; letter-spacing: -.03em; color: #fff; margin-bottom: .4rem; }
 .auth-sub   { font-size: .9rem; color: rgba(255,255,255,.5); margin-bottom: 1.75rem; }

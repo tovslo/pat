@@ -1,5 +1,14 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  app: {
+    head: {
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/logo-icon.svg' },
+        { rel: 'icon', type: 'image/x-icon', href: '/logo-icon.ico' }
+      ]
+    }
+  },
+
   modules: [
     '@nuxt/eslint',
     '@nuxt/ui'

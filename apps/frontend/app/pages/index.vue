@@ -110,7 +110,7 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
           to="/"
           class="logo-mark"
         >
-          <span class="logo-icon">◈</span>
+          <img class="logo-icon" src="/logo-icon.svg" alt="" aria-hidden="true">
           <span class="logo-text">MyApp</span>
         </NuxtLink>
 
@@ -429,7 +429,7 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
         <div class="footer-grid">
           <div class="footer-brand">
             <div class="logo-mark mb-3">
-              <span class="logo-icon">◈</span>
+              <img class="logo-icon" src="/logo-icon.svg" alt="" aria-hidden="true">
               <span class="logo-text">MyApp</span>
             </div>
             <p class="footer-tagline">
@@ -620,7 +620,7 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
   transition: opacity 0.2s;
 }
 .logo-mark:hover { opacity: 0.8; }
-.logo-icon { color: #8b5cf6; font-size: 1.3rem; }
+.logo-icon { width: 1.3rem; height: 1.3rem; vertical-align: middle; }
 
 .desktop-nav {
   display: none;
