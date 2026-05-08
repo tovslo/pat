@@ -88,19 +88,19 @@ api: ## Запустить FastAPI dev-сервер (hot-reload)
 # ref: spec.md → emails (high-priority), reports (default), files (low-priority)
 worker-emails: ## Celery worker для очереди emails
 	cd $(BACKEND_DIR) && uv run celery -A app.celery_app worker \
-	  -Q emails -c 2 --loglevel=debug -n emails@%h
+	  -Q emails --pool=solo --loglevel=debug -n emails@%h
 
 worker-reports: ## Celery worker для очереди reports
 	cd $(BACKEND_DIR) && uv run celery -A app.celery_app worker \
-	  -Q reports -c 1 --loglevel=debug -n reports@%h
+	  -Q reports --pool=solo --loglevel=debug -n reports@%h
 
 worker-files: ## Celery worker для очереди files
 	cd $(BACKEND_DIR) && uv run celery -A app.celery_app worker \
-	  -Q files -c 1 --loglevel=debug -n files@%h
+	  -Q files --pool=solo --loglevel=debug -n files@%h
 
 worker-all: ## Celery worker для всех очередей (удобно для dev)
 	cd $(BACKEND_DIR) && uv run celery -A app.celery_app worker \
-	  -Q emails,reports,files,celery -c 4 --loglevel=debug
+	  -Q emails,reports,files,celery --pool=solo --loglevel=debug
 
 worker-monitor: ## Celery Flower — мониторинг задач в браузере (http://localhost:5555)
 	cd $(BACKEND_DIR) && uv run celery -A app.celery_app flower --port=5555
