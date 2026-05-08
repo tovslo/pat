@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({ layout: false })
@@ -68,1076 +68,221 @@ const techStack = [
 ]
 
 const mobileMenuOpen = ref(false)
-
-const cursorX = ref(-9999)
-const cursorY = ref(-9999)
-
-function onMouseMove(e: MouseEvent) {
-  cursorX.value = e.clientX
-  cursorY.value = e.clientY
-}
-
-onMounted(() => window.addEventListener('mousemove', onMouseMove))
-onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
 </script>
 
 <template>
-  <div class="landing">
-    <!-- ── Cursor glow ── -->
-    <div
-      class="cursor-glow"
-      aria-hidden="true"
-      :style="{ transform: `translate(${cursorX}px, ${cursorY}px)` }"
-    />
+  <div class="min-h-screen bg-black text-white font-bold">
+    <header class="bg-yellow-400 border-b-4 border-black p-4">
+      <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <NuxtLink to="/" class="text-black text-2xl font-black">MYAPP</NuxtLink>
 
-    <!-- ── Animated background ── -->
-    <div
-      class="bg-stage"
-      aria-hidden="true"
-    >
-      <div class="orb orb-1" />
-      <div class="orb orb-2" />
-      <div class="orb orb-3" />
-      <div class="orb orb-4" />
-      <div class="grid-overlay" />
-    </div>
-
-    <!-- ══════════════ HEADER ══════════════ -->
-    <header class="site-header">
-      <div class="wrap flex items-center justify-between h-16">
-        <!-- Logo -->
-        <NuxtLink
-          to="/"
-          class="logo-mark"
-        >
-          <img class="logo-icon" src="/logo-icon.svg" alt="" aria-hidden="true">
-          <span class="logo-text">MyApp</span>
-        </NuxtLink>
-
-        <!-- Desktop nav -->
-        <nav class="desktop-nav">
+        <nav class="hidden md:flex space-x-8">
           <a
             v-for="link in navLinks"
             :key="link.href"
             :href="link.href"
-            class="nav-item"
+            class="text-black font-black text-lg hover:bg-red-500 hover:text-white px-4 py-2 border-4 border-black shadow-[4px_4px_0px_0px_#000]"
           >
             {{ link.label }}
           </a>
         </nav>
 
-        <!-- Actions -->
-        <div class="header-actions">
+        <div class="flex items-center space-x-4">
           <div
             v-if="auth.isLoggedIn"
-            class="user-pill"
+            class="bg-blue-500 text-white px-4 py-2 border-4 border-black shadow-[4px_4px_0px_0px_#000]"
           >
-            <img
-              :src="auth.user?.avatarUrl || DEFAULT_AVATAR"
-              class="user-avatar"
-              alt="Аватарка"
-            >
-            <span class="user-email">{{ auth.user?.email }}</span>
+            {{ auth.user?.email }}
           </div>
           <button
             v-if="auth.isLoggedIn"
-            class="btn-danger"
+            class="bg-red-500 text-white px-4 py-2 border-4 border-black shadow-[4px_4px_0px_0px_#000] font-black"
             @click="handleLogout"
           >
-            Выйти
+            ВЫЙТИ
           </button>
           <NuxtLink
             v-else
             to="/auth/login"
-            class="btn-ghost"
-          >Войти</NuxtLink>
+            class="bg-green-500 text-white px-4 py-2 border-4 border-black shadow-[4px_4px_0px_0px_#000] font-black"
+          >ВОЙТИ</NuxtLink>
 
-          <!-- Burger (mobile) -->
           <button
-            class="burger"
-            :aria-expanded="mobileMenuOpen"
+            class="md:hidden bg-black text-white p-2 border-4 border-white"
             @click="mobileMenuOpen = !mobileMenuOpen"
           >
-            <span
-              class="burger-line"
-              :class="{ open: mobileMenuOpen }"
-            />
-            <span
-              class="burger-line"
-              :class="{ open: mobileMenuOpen }"
-            />
-            <span
-              class="burger-line"
-              :class="{ open: mobileMenuOpen }"
-            />
+            <span class="block w-6 h-1 bg-white mb-1"></span>
+            <span class="block w-6 h-1 bg-white mb-1"></span>
+            <span class="block w-6 h-1 bg-white"></span>
           </button>
         </div>
       </div>
 
-      <!-- Mobile menu -->
-      <Transition name="slide-down">
-        <nav
-          v-if="mobileMenuOpen"
-          class="mobile-nav"
+      <div v-if="mobileMenuOpen" class="md:hidden bg-red-500 border-t-4 border-black p-4">
+        <a
+          v-for="link in navLinks"
+          :key="link.href"
+          :href="link.href"
+          class="block text-white font-black text-lg py-2 border-b-2 border-black"
+          @click="mobileMenuOpen = false"
         >
-          <a
-            v-for="link in navLinks"
-            :key="link.href"
-            :href="link.href"
-            class="mobile-nav-item"
-            @click="mobileMenuOpen = false"
-          >
-            {{ link.label }}
-          </a>
-          <div class="flex gap-3 mt-4 items-center">
-            <template v-if="auth.isLoggedIn">
-              <div class="mobile-user-info flex-1">
-                <img
-                  :src="auth.user?.avatarUrl || DEFAULT_AVATAR"
-                  class="user-avatar"
-                  alt="Аватарка"
-                >
-                <span class="mobile-user-email">{{ auth.user?.email }}</span>
-              </div>
-              <button
-                class="btn-danger"
-                @click="handleLogout; mobileMenuOpen = false"
-              >
-                Выйти
-              </button>
-            </template>
-            <template v-else>
-              <NuxtLink
-                to="/auth/login"
-                class="btn-ghost flex-1 text-center"
-              >Войти</NuxtLink>
-            </template>
-          </div>
-        </nav>
-      </Transition>
+          {{ link.label }}
+        </a>
+        <div class="mt-4">
+          <NuxtLink
+            v-if="!auth.isLoggedIn"
+            to="/auth/login"
+            class="bg-green-500 text-white px-4 py-2 border-4 border-black shadow-[4px_4px_0px_0px_#000] font-black"
+          >ВОЙТИ</NuxtLink>
+        </div>
+      </div>
     </header>
 
-    <!-- ══════════════ HERO ══════════════ -->
-    <section class="hero">
-      <div class="wrap-narrow text-center">
-        <div
-          class="badge animate-fade-up"
-          style="animation-delay: 0.1s"
-        >
-          ✦ Открытый бета-доступ
+    <section class="bg-black text-white py-20 px-4">
+      <div class="max-w-4xl mx-auto text-center">
+        <div class="bg-red-500 text-white px-4 py-2 border-4 border-black shadow-[4px_4px_0px_0px_#000] inline-block mb-8 font-black text-lg">
+          ✦ ОТКРЫТЫЙ БЕТА-ДОСТУП
         </div>
 
-        <h1
-          class="hero-title animate-fade-up"
-          style="animation-delay: 0.2s"
-        >
-          Умная обработка<br>
-          <span class="gradient-text">документов с ИИ</span>
+        <h1 class="text-6xl md:text-8xl font-black mb-8 leading-tight">
+          УМНАЯ ОБРАБОТКА<br>
+          <span class="text-yellow-400">ДОКУМЕНТОВ С ИИ</span>
         </h1>
 
-        <p
-          class="hero-desc animate-fade-up"
-          style="animation-delay: 0.3s"
-        >
+        <p class="text-xl md:text-2xl mb-12 font-bold">
           Загружайте, анализируйте и извлекайте данные из любых документов.<br>
           Self-hosted платформа на FastAPI + Nuxt 3, готовая к продакшну.
         </p>
 
-        <div
-          class="hero-cta animate-fade-up"
-          style="animation-delay: 0.4s"
-        >
+        <div class="flex flex-col md:flex-row gap-4 justify-center">
           <NuxtLink
             to="/auth/register"
-            class="btn-primary btn-lg"
+            class="bg-blue-500 text-white px-8 py-4 border-4 border-black shadow-[4px_4px_0px_0px_#000] font-black text-xl hover:bg-blue-600"
           >
-            Начать бесплатно
-            <span class="ml-1.5">→</span>
+            НАЧАТЬ БЕСПЛАТНО →
           </NuxtLink>
-          <button class="btn-outline btn-lg">
-            Смотреть демо
+          <button class="bg-white text-black px-8 py-4 border-4 border-black shadow-[4px_4px_0px_0px_#000] font-black text-xl hover:bg-gray-200">
+            СМОТРЕТЬ ДЕМО
           </button>
-        </div>
-
-        <!-- Mock UI card -->
-        <div
-          class="glass-card mock-card animate-fade-up"
-          style="animation-delay: 0.5s"
-        >
-          <div class="mock-bar">
-            <span
-              class="mock-dot"
-              style="background:#ef4444"
-            />
-            <span
-              class="mock-dot"
-              style="background:#f59e0b"
-            />
-            <span
-              class="mock-dot"
-              style="background:#22c55e"
-            />
-            <span class="mock-url">myapp.ru/dashboard</span>
-          </div>
-          <div class="mock-body">
-            <div class="mock-sidebar">
-              <div class="mock-item w-full h-3 rounded" />
-              <div class="mock-item w-4/5 h-3 rounded" />
-              <div class="mock-item w-3/5 h-3 rounded" />
-              <div class="mock-item w-full h-3 rounded mt-4" />
-              <div class="mock-item w-2/3 h-3 rounded" />
-            </div>
-            <div class="mock-main">
-              <div class="flex gap-3 mb-4">
-                <div class="glass-card flex-1 h-16 p-3">
-                  <div class="mock-item w-1/2 h-2 rounded mb-2" />
-                  <div class="mock-item w-1/3 h-4 rounded" />
-                </div>
-                <div class="glass-card flex-1 h-16 p-3">
-                  <div class="mock-item w-1/2 h-2 rounded mb-2" />
-                  <div class="mock-item w-2/5 h-4 rounded" />
-                </div>
-                <div class="glass-card flex-1 h-16 p-3">
-                  <div class="mock-item w-1/2 h-2 rounded mb-2" />
-                  <div class="mock-item w-1/4 h-4 rounded" />
-                </div>
-              </div>
-              <div class="glass-card h-24 p-3">
-                <div class="mock-item w-2/5 h-2 rounded mb-3" />
-                <div class="flex gap-1 items-end h-12">
-                  <div
-                    v-for="h in [30, 55, 40, 70, 50, 80, 60]"
-                    :key="h"
-                    class="mock-bar-item flex-1 rounded-t"
-                    :style="{ height: h + '%' }"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </section>
 
-    <!-- ══════════════ FEATURES ══════════════ -->
-    <section
-      id="features"
-      class="section"
-    >
-      <div class="wrap">
-        <div class="section-head">
-          <div class="badge">
-            Возможности
+    <section id="features" class="bg-white text-black py-20 px-4">
+      <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-16">
+          <div class="bg-green-500 text-white px-4 py-2 border-4 border-black shadow-[4px_4px_0px_0px_#000] inline-block mb-4 font-black text-lg">
+            ВОЗМОЖНОСТИ
           </div>
-          <h2 class="section-title">
-            Всё для работы с документами
-          </h2>
-          <p class="section-desc">
+          <h2 class="text-5xl font-black mb-4">ВСЁ ДЛЯ РАБОТЫ С ДОКУМЕНТАМИ</h2>
+          <p class="text-xl font-bold">
             Платформа объединяет ИИ-анализ, семантический поиск<br>и автоматизацию в едином self-hosted решении
           </p>
         </div>
 
-        <div class="features-grid">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <div
             v-for="f in features"
             :key="f.title"
-            class="glass-card feature-card"
+            class="bg-yellow-400 text-black p-8 border-4 border-black shadow-[4px_4px_0px_0px_#000]"
           >
-            <div class="feature-icon">
-              {{ f.icon }}
-            </div>
-            <h3 class="feature-title">
-              {{ f.title }}
-            </h3>
-            <p class="feature-desc">
-              {{ f.desc }}
-            </p>
-            <div class="card-glow" />
+            <div class="text-6xl mb-4">{{ f.icon }}</div>
+            <h3 class="text-2xl font-black mb-4">{{ f.title }}</h3>
+            <p class="text-lg font-bold">{{ f.desc }}</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ══════════════ TECH STACK ══════════════ -->
-    <section
-      id="tech"
-      class="section"
-    >
-      <div class="wrap">
-        <div class="section-head">
-          <div class="badge">
-            Технологии
+    <section id="tech" class="bg-black text-white py-20 px-4">
+      <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-16">
+          <div class="bg-purple-500 text-white px-4 py-2 border-4 border-black shadow-[4px_4px_0px_0px_#000] inline-block mb-4 font-black text-lg">
+            ТЕХНОЛОГИИ
           </div>
-          <h2 class="section-title">
-            Проверенный стек
-          </h2>
-          <p class="section-desc">
-            Production-ready технологии без избыточных зависимостей
-          </p>
+          <h2 class="text-5xl font-black mb-4">ПРОВЕРЕННЫЙ СТЕК</h2>
+          <p class="text-xl font-bold">Production-ready технологии без избыточных зависимостей</p>
         </div>
 
-        <div class="tech-grid">
+        <div class="flex flex-wrap justify-center gap-4">
           <div
             v-for="t in techStack"
             :key="t.label"
-            class="glass-card tech-chip"
+            class="bg-white text-black px-6 py-3 border-4 border-black shadow-[4px_4px_0px_0px_#000] font-black text-lg"
           >
-            <span
-              class="tech-dot"
-              :style="{ background: t.color }"
-            />
+            <span class="inline-block w-4 h-4 rounded-full mr-2" :style="{ background: t.color }"></span>
             {{ t.label }}
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ══════════════ CTA ══════════════ -->
-    <section
-      id="contact"
-      class="section"
-    >
-      <div class="wrap-narrow">
-        <div class="glass-card cta-card">
-          <div class="cta-glow" />
-          <div class="badge mx-auto w-fit">
-            Начните сегодня
-          </div>
-          <h2 class="cta-title">
-            Готовы к запуску?
-          </h2>
-          <p class="cta-desc">
-            Разверните платформу на своём сервере за 5 минут.<br>
-            Полный контроль над данными, без vendor lock-in.
-          </p>
-          <div class="hero-cta">
-            <NuxtLink
-              to="/auth/register"
-              class="btn-primary btn-lg"
-            >Получить доступ</NuxtLink>
-            <button class="btn-outline btn-lg">
-              Документация
-            </button>
-          </div>
+    <section id="contact" class="bg-red-500 text-white py-20 px-4">
+      <div class="max-w-4xl mx-auto text-center">
+        <div class="bg-black text-white px-4 py-2 border-4 border-white shadow-[4px_4px_0px_0px_#fff] inline-block mb-8 font-black text-lg">
+          НАЧНИТЕ СЕГОДНЯ
+        </div>
+        <h2 class="text-5xl font-black mb-4">ГОТОВЫ К ЗАПУСКУ?</h2>
+        <p class="text-xl font-bold mb-12">
+          Разверните платформу на своём сервере за 5 минут.<br>
+          Полный контроль над данными, без vendor lock-in.
+        </p>
+        <div class="flex flex-col md:flex-row gap-4 justify-center">
+          <NuxtLink
+            to="/auth/register"
+            class="bg-yellow-400 text-black px-8 py-4 border-4 border-black shadow-[4px_4px_0px_0px_#000] font-black text-xl hover:bg-yellow-500"
+          >ПОЛУЧИТЬ ДОСТУП</NuxtLink>
+          <button class="bg-black text-white px-8 py-4 border-4 border-white shadow-[4px_4px_0px_0px_#fff] font-black text-xl hover:bg-gray-800">
+            ДОКУМЕНТАЦИЯ
+          </button>
         </div>
       </div>
     </section>
 
-    <!-- ══════════════ FOOTER ══════════════ -->
-    <footer class="site-footer">
-      <div class="wrap">
-        <div class="footer-grid">
-          <div class="footer-brand">
-            <div class="logo-mark mb-3">
-              <img class="logo-icon" src="/logo-icon.svg" alt="" aria-hidden="true">
-              <span class="logo-text">MyApp</span>
-            </div>
-            <p class="footer-tagline">
-              Современная ИИ-платформа<br>для работы с документами
-            </p>
+    <footer class="bg-black text-white py-12 px-4 border-t-4 border-white">
+      <div class="max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          <div>
+            <div class="text-2xl font-black mb-4">MYAPP</div>
+            <p class="font-bold">Современная ИИ-платформа<br>для работы с документами</p>
           </div>
 
           <div>
-            <h4 class="footer-col-title">
-              Продукт
-            </h4>
-            <ul class="footer-links">
-              <li><a href="#features">Возможности</a></li>
-              <li><a href="#tech">Технологии</a></li>
-              <li><a href="#pricing">Тарифы</a></li>
-              <li><a href="#">Документация</a></li>
+            <h4 class="text-xl font-black mb-4">ПРОДУКТ</h4>
+            <ul class="space-y-2 font-bold">
+              <li><a href="#features" class="hover:text-yellow-400">Возможности</a></li>
+              <li><a href="#tech" class="hover:text-yellow-400">Технологии</a></li>
+              <li><a href="#pricing" class="hover:text-yellow-400">Тарифы</a></li>
+              <li><a href="#" class="hover:text-yellow-400">Документация</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 class="footer-col-title">
-              Компания
-            </h4>
-            <ul class="footer-links">
-              <li><a href="#">О нас</a></li>
-              <li><a href="#contact">Контакты</a></li>
-              <li><a href="#">Политика</a></li>
-              <li><a href="#">Условия</a></li>
+            <h4 class="text-xl font-black mb-4">КОМПАНИЯ</h4>
+            <ul class="space-y-2 font-bold">
+              <li><a href="#" class="hover:text-yellow-400">О нас</a></li>
+              <li><a href="#contact" class="hover:text-yellow-400">Контакты</a></li>
+              <li><a href="#" class="hover:text-yellow-400">Политика</a></li>
+              <li><a href="#" class="hover:text-yellow-400">Условия</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 class="footer-col-title">
-              Сообщество
-            </h4>
-            <ul class="footer-links">
-              <li><a href="#">GitHub</a></li>
-              <li><a href="#">Telegram</a></li>
-              <li><a href="#">Discord</a></li>
-              <li><a href="#">Changelog</a></li>
+            <h4 class="text-xl font-black mb-4">СООБЩЕСТВО</h4>
+            <ul class="space-y-2 font-bold">
+              <li><a href="#" class="hover:text-yellow-400">GitHub</a></li>
+              <li><a href="#" class="hover:text-yellow-400">Telegram</a></li>
+              <li><a href="#" class="hover:text-yellow-400">Discord</a></li>
+              <li><a href="#" class="hover:text-yellow-400">Changelog</a></li>
             </ul>
           </div>
         </div>
 
-        <div class="footer-bottom">
-          <p>© {{ new Date().getFullYear() }} MyApp. Все права защищены.</p>
-          <p>Создано на Nuxt 3 + FastAPI</p>
+        <div class="border-t-2 border-white pt-8 text-center font-bold">
+          <p>© {{ new Date().getFullYear() }} MYAPP. ВСЕ ПРАВА ЗАЩИЩЕНЫ.</p>
+          <p>СОЗДАНО НА NUXT 3 + FASTAPI</p>
         </div>
       </div>
     </footer>
   </div>
 </template>
-
-<style scoped>
-/* ── Cursor glow ── */
-.cursor-glow {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 1;
-  pointer-events: none;
-  width: 600px;
-  height: 600px;
-  margin-left: -300px;
-  margin-top: -300px;
-  background: radial-gradient(
-    circle at center,
-    rgba(139, 92, 246, 0.12) 0%,
-    rgba(99, 102, 241, 0.06) 35%,
-    transparent 70%
-  );
-  border-radius: 50%;
-  transition: transform 0.12s ease-out;
-  will-change: transform;
-}
-
-/* ── Root ── */
-.landing {
-  min-height: 100vh;
-  background: #07071a;
-  color: #fff;
-  overflow-x: hidden;
-  font-family: var(--font-sans, 'Public Sans', sans-serif);
-}
-
-/* ── Layout helpers ── */
-.wrap        { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
-.wrap-narrow { max-width: 860px;  margin: 0 auto; padding: 0 1.5rem; }
-
-/* ── Animated background ── */
-.bg-stage {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.orb {
-  position: absolute;
-  border-radius: 50%;
-  animation: blob-drift 22s infinite ease-in-out;
-}
-.orb-1 {
-  width: 700px; height: 700px;
-  background: radial-gradient(circle at 40% 40%, #6d28d9 0%, transparent 65%);
-  top: -280px; left: -180px;
-  opacity: 0.55;
-  animation-duration: 24s;
-}
-.orb-2 {
-  width: 560px; height: 560px;
-  background: radial-gradient(circle at 60% 40%, #1d4ed8 0%, transparent 65%);
-  top: 25%; right: -150px;
-  opacity: 0.45;
-  animation-name: blob-drift-alt;
-  animation-duration: 28s;
-}
-.orb-3 {
-  width: 440px; height: 440px;
-  background: radial-gradient(circle at 50% 60%, #059669 0%, transparent 65%);
-  bottom: 5%; left: 15%;
-  opacity: 0.38;
-  animation-duration: 32s;
-  animation-delay: -10s;
-}
-.orb-4 {
-  width: 380px; height: 380px;
-  background: radial-gradient(circle at 50% 50%, #be185d 0%, transparent 65%);
-  top: 55%; right: 25%;
-  opacity: 0.35;
-  animation-name: blob-drift-alt;
-  animation-duration: 26s;
-  animation-delay: -6s;
-}
-
-.grid-overlay {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
-  background-size: 60px 60px;
-  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
-}
-
-/* ── Glass card ── */
-.glass-card {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 1.25rem;
-  box-shadow: 0 8px 32px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);
-  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease, border-color 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-.glass-card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.16);
-  transform: translateY(-5px);
-  box-shadow: 0 20px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.12);
-}
-
-/* ── Header ── */
-.site-header {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 100;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  background: rgba(7, 7, 26, 0.72);
-  border-bottom: 1px solid rgba(255,255,255,.07);
-  padding: 0 1.5rem;
-  transition: background 0.3s;
-}
-
-.logo-mark {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  text-decoration: none;
-  font-weight: 700;
-  font-size: 1.15rem;
-  letter-spacing: -0.02em;
-  color: #fff;
-  transition: opacity 0.2s;
-}
-.logo-mark:hover { opacity: 0.8; }
-.logo-icon { width: 1.3rem; height: 1.3rem; vertical-align: middle; }
-
-.desktop-nav {
-  display: none;
-  gap: 0.25rem;
-}
-@media (min-width: 768px) {
-  .desktop-nav { display: flex; }
-}
-
-.nav-item {
-  padding: 0.45rem 0.9rem;
-  border-radius: 0.6rem;
-  font-size: 0.875rem;
-  color: rgba(255,255,255,.65);
-  text-decoration: none;
-  transition: color 0.2s, background 0.2s;
-  position: relative;
-}
-.nav-item::after {
-  content: '';
-  position: absolute;
-  bottom: 4px; left: 50%; right: 50%;
-  height: 2px;
-  background: #8b5cf6;
-  border-radius: 1px;
-  transition: left 0.25s ease, right 0.25s ease;
-}
-.nav-item:hover { color: #fff; background: rgba(255,255,255,.06); }
-.nav-item:hover::after { left: 0.9rem; right: 0.9rem; }
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-/* ── Buttons ── */
-.btn-ghost {
-  padding: 0.45rem 1rem;
-  border-radius: 0.65rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: rgba(255,255,255,.7);
-  background: transparent;
-  border: 1px solid rgba(255,255,255,.12);
-  cursor: pointer;
-  transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.15s;
-}
-.btn-ghost:hover {
-  color: #fff;
-  background: rgba(255,255,255,.07);
-  border-color: rgba(255,255,255,.22);
-  transform: translateY(-1px);
-}
-
-.btn-primary {
-  padding: 0.45rem 1.1rem;
-  border-radius: 0.65rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #fff;
-  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
-  border: 1px solid rgba(139,92,246,.4);
-  cursor: pointer;
-  transition: filter 0.2s, transform 0.15s, box-shadow 0.2s;
-  box-shadow: 0 4px 20px rgba(124,58,237,.35);
-}
-.btn-primary:hover {
-  filter: brightness(1.12);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(124,58,237,.5);
-}
-.btn-primary:active { transform: translateY(0); }
-
-.btn-danger {
-  padding: 0.45rem 1rem;
-  border-radius: 0.65rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #fca5a5;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.15s;
-}
-.btn-danger:hover {
-  color: #fff;
-  background: rgba(239, 68, 68, 0.75);
-  border-color: rgba(239, 68, 68, 0.8);
-  transform: translateY(-1px);
-}
-
-.btn-outline {
-  padding: 0.45rem 1.1rem;
-  border-radius: 0.65rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: rgba(255,255,255,.8);
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.15);
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.15s;
-}
-.btn-outline:hover {
-  color: #fff;
-  background: rgba(255,255,255,.09);
-  border-color: rgba(255,255,255,.28);
-  transform: translateY(-2px);
-}
-
-.btn-lg { padding: 0.75rem 1.75rem; font-size: 1rem; border-radius: 0.85rem; }
-
-/* ── User pill (header) ── */
-.user-pill {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0.75rem 0.25rem 0.25rem;
-  border-radius: 2rem;
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.1);
-}
-.user-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-.user-email {
-  font-size: 0.8rem;
-  color: rgba(255,255,255,.75);
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ── Mobile user info ── */
-.mobile-user-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.mobile-user-email {
-  font-size: 0.85rem;
-  color: rgba(255,255,255,.7);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ── Burger ── */
-.burger {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 0.4rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-@media (min-width: 768px) { .burger { display: none; } }
-
-.burger-line {
-  display: block;
-  width: 22px;
-  height: 2px;
-  background: rgba(255,255,255,.7);
-  border-radius: 1px;
-  transition: transform 0.25s, opacity 0.25s;
-}
-.burger-line.open:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-.burger-line.open:nth-child(2) { opacity: 0; }
-.burger-line.open:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-
-.mobile-nav {
-  padding: 1rem 0 1.25rem;
-  border-top: 1px solid rgba(255,255,255,.07);
-}
-.mobile-nav-item {
-  display: block;
-  padding: 0.65rem 0;
-  color: rgba(255,255,255,.7);
-  text-decoration: none;
-  font-size: 0.95rem;
-  transition: color 0.2s;
-}
-.mobile-nav-item:hover { color: #fff; }
-
-/* ── Slide-down transition ── */
-.slide-down-enter-active,
-.slide-down-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.slide-down-enter-from,
-.slide-down-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
-}
-
-/* ── Hero ── */
-.hero {
-  position: relative;
-  z-index: 10;
-  padding: 10rem 0 5rem;
-  text-align: center;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.9rem;
-  border-radius: 2rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #a78bfa;
-  background: rgba(139,92,246,.12);
-  border: 1px solid rgba(139,92,246,.25);
-  margin-bottom: 1.5rem;
-  letter-spacing: 0.01em;
-}
-
-.hero-title {
-  font-size: clamp(2.4rem, 6vw, 4rem);
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -0.03em;
-  margin-bottom: 1.4rem;
-}
-
-.gradient-text {
-  background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 50%, #10b981 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.hero-desc {
-  font-size: 1.1rem;
-  color: rgba(255,255,255,.55);
-  line-height: 1.7;
-  margin-bottom: 2.25rem;
-}
-
-.hero-cta {
-  display: flex;
-  gap: 0.85rem;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-bottom: 3rem;
-}
-
-/* ── Mock UI card ── */
-.mock-card {
-  margin-top: 1rem;
-  text-align: left;
-  padding: 0;
-  overflow: hidden;
-}
-
-.mock-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  background: rgba(255,255,255,.04);
-  border-bottom: 1px solid rgba(255,255,255,.07);
-}
-.mock-dot {
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.mock-url {
-  flex: 1;
-  font-size: 0.75rem;
-  color: rgba(255,255,255,.3);
-  text-align: center;
-  font-family: monospace;
-}
-
-.mock-body {
-  display: flex;
-  gap: 1rem;
-  padding: 1rem;
-  min-height: 160px;
-}
-.mock-sidebar {
-  width: 140px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding-top: 0.25rem;
-}
-.mock-main { flex: 1; }
-
-.mock-item {
-  background: rgba(255,255,255,.09);
-  border-radius: 4px;
-  animation: pulse-glow 2.5s infinite;
-}
-
-.mock-bar-item {
-  background: linear-gradient(180deg, #8b5cf6 0%, rgba(139,92,246,.3) 100%);
-  border-radius: 3px 3px 0 0;
-  min-height: 4px;
-  animation: pulse-glow 2s infinite;
-}
-
-/* ── Sections ── */
-.section {
-  position: relative;
-  z-index: 10;
-  padding: 6rem 0;
-}
-
-.section-head {
-  text-align: center;
-  margin-bottom: 3.5rem;
-}
-.section-title {
-  font-size: clamp(1.8rem, 4vw, 2.6rem);
-  font-weight: 750;
-  letter-spacing: -0.025em;
-  margin: 0.75rem 0 0.9rem;
-}
-.section-desc {
-  color: rgba(255,255,255,.5);
-  font-size: 1rem;
-  line-height: 1.7;
-}
-
-/* ── Features grid ── */
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.25rem;
-}
-
-.feature-card {
-  padding: 1.75rem;
-  cursor: default;
-}
-.feature-icon {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-  display: block;
-}
-.feature-title {
-  font-size: 1.05rem;
-  font-weight: 650;
-  margin-bottom: 0.6rem;
-  letter-spacing: -0.01em;
-}
-.feature-desc {
-  font-size: 0.875rem;
-  color: rgba(255,255,255,.5);
-  line-height: 1.65;
-}
-.card-glow {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(circle at 50% 0%, rgba(139,92,246,.12) 0%, transparent 60%);
-  opacity: 0;
-  transition: opacity 0.3s;
-  pointer-events: none;
-}
-.feature-card:hover .card-glow { opacity: 1; }
-
-/* ── Tech grid ── */
-.tech-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.85rem;
-  justify-content: center;
-}
-
-.tech-chip {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 1.2rem;
-  border-radius: 2rem;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: default;
-}
-.tech-chip:hover { transform: translateY(-3px) scale(1.03); }
-.tech-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  box-shadow: 0 0 6px currentColor;
-}
-
-/* ── CTA ── */
-.cta-card {
-  padding: 3.5rem 2.5rem;
-  text-align: center;
-  border-color: rgba(139,92,246,.2);
-}
-.cta-card:hover { transform: none; }
-.cta-glow {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(109,40,217,.2) 0%, transparent 70%);
-  pointer-events: none;
-}
-.cta-title {
-  font-size: clamp(2rem, 4vw, 2.8rem);
-  font-weight: 780;
-  letter-spacing: -0.03em;
-  margin: 0.75rem 0 0.9rem;
-}
-.cta-desc {
-  color: rgba(255,255,255,.5);
-  font-size: 1rem;
-  line-height: 1.7;
-  margin-bottom: 2rem;
-}
-
-/* ── Footer ── */
-.site-footer {
-  position: relative;
-  z-index: 10;
-  background: rgba(255,255,255,.025);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255,255,255,.07);
-  padding: 3.5rem 0 2rem;
-}
-
-.footer-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
-  gap: 2rem;
-  margin-bottom: 2.5rem;
-}
-@media (max-width: 768px) {
-  .footer-grid { grid-template-columns: 1fr 1fr; }
-  .footer-brand { grid-column: 1 / -1; }
-}
-@media (max-width: 480px) {
-  .footer-grid { grid-template-columns: 1fr; }
-}
-
-.logo-text { color: #fff; }
-.footer-tagline {
-  font-size: 0.85rem;
-  color: rgba(255,255,255,.38);
-  line-height: 1.6;
-}
-
-.footer-col-title {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: rgba(255,255,255,.55);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  margin-bottom: 0.85rem;
-}
-
-.footer-links {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
-.footer-links a {
-  font-size: 0.875rem;
-  color: rgba(255,255,255,.45);
-  text-decoration: none;
-  transition: color 0.2s;
-}
-.footer-links a:hover { color: rgba(255,255,255,.85); }
-
-.footer-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(255,255,255,.07);
-  font-size: 0.8rem;
-  color: rgba(255,255,255,.3);
-}
-
-/* ── Animations ── */
-.animate-fade-up {
-  animation: fade-up 0.65s ease both;
-}
-
-@keyframes blob-drift {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25%       { transform: translate(24px, -32px) scale(1.05); }
-  50%       { transform: translate(-18px, 18px) scale(0.96); }
-  75%       { transform: translate(28px, 12px) scale(1.02); }
-}
-@keyframes blob-drift-alt {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%       { transform: translate(-28px, 22px) scale(1.07); }
-  66%       { transform: translate(16px, -18px) scale(0.93); }
-}
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(28px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.5; }
-  50%       { opacity: 0.85; }
-}
-</style>
